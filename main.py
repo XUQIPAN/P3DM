@@ -33,10 +33,9 @@ def parse_args_and_config():
 
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, 'logs', args.doc)
-
     # parse config file
     with open(os.path.join('configs', args.config), 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     new_config = dict2namespace(config)
 
     tb_path = os.path.join(args.exp, 'tensorboard', args.doc)
@@ -159,6 +158,8 @@ def main():
 
     try:
         runner = NCSNRunner(args, config)
+        # TODO: try to use runner.py "Runner(args, config)" to replace NCSNRunner in the code
+        # but no test and sample functions
         if args.test:
             runner.test()
         elif args.sample:
