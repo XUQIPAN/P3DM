@@ -19,3 +19,4 @@ mnist_cls.pth
 .idea/DPGEN-SIMPLE-master.iml
 .gitignore
 .idea/workspace.xml
+run.sh

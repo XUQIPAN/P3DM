@@ -157,7 +157,7 @@ def main():
     print("<" * 80)
 
     try:
-        runner = NCSNRunner(args, config)
+        runner = Runner(args, config)
         # TODO: try to use runner.py "Runner(args, config)" to replace NCSNRunner in the code
         # but no test and sample functions
         if args.test:
