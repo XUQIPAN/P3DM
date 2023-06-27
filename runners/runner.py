@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import logging
 import torch
 import os
+from torchvision.transforms import ToPILImage
 from torchvision.utils import make_grid, save_image
 from torch.utils.data import DataLoader
 from models.net import RefineNet
@@ -37,6 +38,13 @@ class Runner():
 
     def train(self):
         dataset, test_dataset = get_dataset(self.args, self.config)
+        # show one of the ground truth image samples
+        train_loader = torch.utils.data.DataLoader(dataset, batch_size=36, shuffle=True)
+        images, _ = next(iter(train_loader))
+        grid = make_grid(images, nrow=6)
+        save_image(grid, os.path.join(self.args.log_sample_path, 'ground_truth_sample.png'))
+
+
         dataloader = DataLoader(dataset, batch_size=self.config.training.k, shuffle=True,
                                 num_workers=self.config.data.num_workers, drop_last=True)
         test_loader = DataLoader(test_dataset, batch_size=self.config.training.batch_size, shuffle=True,
@@ -47,7 +55,6 @@ class Runner():
         tb_logger = self.config.tb_logger
 
         score = get_model(self.config)
-        # import ipdb; ipdb.set_trace()
 
         score = torch.nn.DataParallel(score)
         optimizer = get_optimizer(self.config, score.parameters())

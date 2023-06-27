@@ -2,7 +2,7 @@ import os
 import torch
 import torchvision.transforms as transforms
 from torchvision.datasets import CIFAR10, LSUN, FashionMNIST, MNIST
-# from datasets.celeba import CelebA
+from datasets.celeba import CelebA
 # from datasets.ffhq import FFHQ
 from torch.utils.data import Subset
 import numpy as np
@@ -57,7 +57,7 @@ def get_dataset(args, config):
                                  transforms.ToTensor(),
                              ]), download=False)
 
-        test_dataset = CelebA(root=os.path.join(args.exp, 'datasets', 'celeba_test'), split='test',
+        test_dataset = CelebA(root=os.path.join(args.exp, 'datasets', 'celeba'), split='test',
                               transform=transforms.Compose([
                                   transforms.CenterCrop(140),
                                   transforms.Resize(config.data.image_size),
