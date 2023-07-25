@@ -21,3 +21,6 @@ mnist_cls.pth
 .idea/workspace.xml
 run.sh
 .idea/DPGEN-SIMPLE-master.iml
+celeba_cls.pth
+train_celeba_x_exp_fake.pkl
+train_celeba_y_exp_fake.pkl
