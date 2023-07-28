@@ -165,7 +165,7 @@ class Runner():
                                                   device=self.config.device)
                         init_samples = data_transform(self.config, init_samples)
 
-                        all_samples = anneal_Langevin_dynamics(init_samples, test_score, sigmas.cpu().numpy(),
+                        all_samples = anneal_Langevin_dynamics(init_samples, y, test_score, sigmas.cpu().numpy(),
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,

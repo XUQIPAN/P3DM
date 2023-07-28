@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from classifier_guidance import grad_classifier
 
 def get_sigmas(config):
     if config.model.sigma_dist == 'geometric':
@@ -17,7 +18,7 @@ def get_sigmas(config):
     return sigmas
 
 @torch.no_grad()
-def anneal_Langevin_dynamics(x_mod, scorenet, sigmas, n_steps_each=200, step_lr=0.000008,
+def anneal_Langevin_dynamics(x_mod, label, scorenet, sigmas, n_steps_each=200, step_lr=0.000008,
                              final_only=False, verbose=False, denoise=True):
     images = []
 
@@ -32,7 +33,8 @@ def anneal_Langevin_dynamics(x_mod, scorenet, sigmas, n_steps_each=200, step_lr=
                 noise = torch.randn_like(x_mod)
                 grad_norm = torch.norm(grad.view(grad.shape[0], -1), dim=-1).mean()
                 noise_norm = torch.norm(noise.view(noise.shape[0], -1), dim=-1).mean()
-                x_mod = x_mod + step_size * grad + noise * np.sqrt(step_size * 2)
+                scale = 1
+                x_mod = x_mod + step_size * grad + noise * np.sqrt(step_size * 2) + grad_classifier(scale, x_mod, label) 
 
                 image_norm = torch.norm(x_mod.view(x_mod.shape[0], -1), dim=-1).mean()
                 snr = np.sqrt(step_size / 2.) * grad_norm / noise_norm
