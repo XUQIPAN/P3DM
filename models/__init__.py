@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from classifier_guidance import grad_classifier
+from models.classifier_guidance import grad_classifier
 
 def get_sigmas(config):
     if config.model.sigma_dist == 'geometric':

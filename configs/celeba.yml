@@ -41,7 +41,7 @@ test:
 
 data:
   dataset: "CELEBA"
-  image_size: 64
+  image_size: 128
   channels: 3
   logit_transform: false
   uniform_dequantization: false

@@ -12,7 +12,6 @@ import torch.utils.tensorboard as tb
 import copy
 from runners import *
 
-import os
 
 def parse_args_and_config():
     parser = argparse.ArgumentParser(description=globals()['__doc__'])
@@ -163,6 +162,7 @@ def main():
         elif args.sample:
             runner.sample()
         else:
+            print(torch.cuda.current_device())
             runner.train()
     except:
         logging.error(traceback.format_exc())

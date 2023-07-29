@@ -18,6 +18,7 @@ from models import get_sigmas
 from models.ema import EMAHelper
 
 
+
 def get_model(config):
     if config.data.dataset == 'CIFAR10' or config.data.dataset == 'CELEBA' or config.data.dataset == 'FashionMNIST' or config.data.dataset == 'MNIST':
         return RefineNet(config).to(config.device)
