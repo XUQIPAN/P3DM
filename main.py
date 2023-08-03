@@ -1,3 +1,5 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '4, 3, 5, 6, 7'
 import argparse
 import traceback
 import time
@@ -5,7 +7,6 @@ import shutil
 import logging
 import yaml
 import sys
-import os
 import torch
 import numpy as np
 import torch.utils.tensorboard as tb
@@ -162,7 +163,13 @@ def main():
         elif args.sample:
             runner.sample()
         else:
-            print(torch.cuda.current_device())
+            num_gpus_available = torch.cuda.device_count()
+            print("Number of available GPUs:", num_gpus_available)
+
+            # Get the GPU numbers in the system
+            gpu_numbers = [torch.cuda.get_device_properties(i) for i in range(num_gpus_available)]
+            print("GPU numbers in the system:", gpu_numbers)
+            print("Current device ", torch.cuda.current_device())
             runner.train()
     except:
         logging.error(traceback.format_exc())

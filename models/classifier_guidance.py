@@ -48,11 +48,8 @@ def check_cuda():
 
 def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor)->float:
     # compute the gradient of classifier
-    train_transform = transforms.Compose([
-        transforms.Resize((128,128)),
-        transforms.ToTensor()
-    ])
-    # x = train_transform(x).cuda()
+    train_transform = transforms.Resize((128,128))
+    x = train_transform(x)
     target = torch.eye(2)[y].squeeze().cuda()
 
     is_cuda = check_cuda()
@@ -65,24 +62,20 @@ def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor)->float:
     pred = model(x)
     loss = criterion(pred, target)
 
-    model.zero_grad()
-    loss.backward()
-    total_gradients = 0.0
-    param_num = 0
-    for param in model.parameters():
-        if param.grad is not None:
-            total_gradients += param.grad.sum().item()
-            param_num += 1
-
-    return scale * total_gradients/param_num/x.view(-1).cpu().detach().numpy().shape[0]
+    gradient = torch.autograd.grad(outputs=loss, inputs=x)
+    grad_transform = transforms.Resize((64,64))
+    gradient = grad_transform(gradient[0])
+    # gradient shape: tuple(tensor)
+    # print(gradient.shape)
+    return scale * gradient
 
 
 if __name__ == "__main__":
     device = torch.device('cuda')
-    init_samples = torch.rand(36, 3, 128, 128)
+    init_samples = torch.rand(36, 3, 64, 64, requires_grad=True)
     print(init_samples.shape)
-    print(init_samples.view(-1).numpy().shape[0])
+    print(init_samples.view(-1).detach().numpy().shape[0])
     label = torch.randint(0, 2, (init_samples.shape[0],))
     print(label.shape)
     grad = grad_classifier(1, init_samples.cuda(), label)
-    print(grad)
+    print(grad.shape)

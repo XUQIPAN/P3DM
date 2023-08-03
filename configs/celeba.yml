@@ -1,13 +1,13 @@
 training:
-  batch_size: 128
+  batch_size: 36
   queue_size: 60000
   n_epochs: 500000
-  n_iters: 250001
+  n_iters: 300001
   snapshot_freq: 5000
   snapshot_sampling: true
   anneal_power: 2
   log_all_sigmas: false
-  k: 128
+  k: 36
   epsilon: 10
 
 sampling:
@@ -41,7 +41,7 @@ test:
 
 data:
   dataset: "CELEBA"
-  image_size: 128
+  image_size: 64
   channels: 3
   logit_transform: false
   uniform_dequantization: false

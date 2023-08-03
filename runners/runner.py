@@ -82,6 +82,12 @@ class Runner():
 
         for epoch in range(start_epoch, self.config.training.n_epochs):
             for i, (X, y) in enumerate(dataloader):
+                # shape of y : (16, 40)
+                # gender attribute: male or not male
+                y = y[:, 20:21]
+                # print(y.shape)
+                # target = torch.eye(2)[y].squeeze().cuda()
+                # print(target.shape)
                 score.train()
                 step += 1
 
@@ -161,9 +167,9 @@ class Runner():
                             test_score = score
 
                         test_score.eval()
-                        init_samples = torch.rand(36, self.config.data.channels,
+                        init_samples = torch.rand(self.config.training.k, self.config.data.channels,
                                                   self.config.data.image_size, self.config.data.image_size,
-                                                  device=self.config.device)
+                                                  device=self.config.device, requires_grad=True)
                         init_samples = data_transform(self.config, init_samples)
 
                         all_samples = anneal_Langevin_dynamics(init_samples, y, test_score, sigmas.cpu().numpy(),
@@ -178,7 +184,7 @@ class Runner():
 
                         sample = inverse_data_transform(self.config, sample)
 
-                        image_grid = make_grid(sample, 6)
+                        image_grid = make_grid(sample, round(np.sqrt(self.config.training.k)))
                         save_image(image_grid,
                                    os.path.join(self.args.log_sample_path, 'image_grid_{}.png'.format(step)))
                         torch.save(sample, os.path.join(self.args.log_sample_path, 'samples_{}.pth'.format(step)))
