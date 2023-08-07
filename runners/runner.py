@@ -167,12 +167,12 @@ class Runner():
                             test_score = score
 
                         test_score.eval()
-                        init_samples = torch.rand(self.config.training.k, self.config.data.channels,
+                        init_samples = torch.rand(36, self.config.data.channels,
                                                   self.config.data.image_size, self.config.data.image_size,
                                                   device=self.config.device, requires_grad=True)
                         init_samples = data_transform(self.config, init_samples)
 
-                        all_samples = anneal_Langevin_dynamics(init_samples, y, test_score, sigmas.cpu().numpy(),
+                        all_samples = anneal_Langevin_dynamics(init_samples, y[:36, ...], test_score, sigmas.cpu().numpy(),
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,
@@ -184,7 +184,7 @@ class Runner():
 
                         sample = inverse_data_transform(self.config, sample)
 
-                        image_grid = make_grid(sample, round(np.sqrt(self.config.training.k)))
+                        image_grid = make_grid(sample, 6)
                         save_image(image_grid,
                                    os.path.join(self.args.log_sample_path, 'image_grid_{}.png'.format(step)))
                         torch.save(sample, os.path.join(self.args.log_sample_path, 'samples_{}.pth'.format(step)))
