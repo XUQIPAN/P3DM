@@ -32,9 +32,8 @@ def anneal_Langevin_dynamics(x_mod, label, scorenet, sigmas, n_steps_each=200, s
                 noise = torch.randn_like(x_mod)
                 grad_norm = torch.norm(grad.view(grad.shape[0], -1), dim=-1).mean()
                 noise_norm = torch.norm(noise.view(noise.shape[0], -1), dim=-1).mean()
-            scale = 1
-            classifier_grad = grad_classifier(scale, x_mod, label)
-            x_mod = x_mod + step_size * grad + noise * np.sqrt(step_size * 2) + step_size * classifier_grad 
+
+            x_mod = x_mod + step_size * grad + noise * np.sqrt(step_size * 2)
 
             image_norm = torch.norm(x_mod.view(x_mod.shape[0], -1), dim=-1).mean()
             snr = np.sqrt(step_size / 2.) * grad_norm / noise_norm
@@ -45,7 +44,11 @@ def anneal_Langevin_dynamics(x_mod, label, scorenet, sigmas, n_steps_each=200, s
             if verbose:
                 print("level: {}, step_size: {}, grad_norm: {}, image_norm: {}, snr: {}, grad_mean_norm: {}".format(
                     c, step_size, grad_norm.item(), image_norm.item(), snr.item(), grad_mean_norm.item()))
-
+                
+    scale = 1
+    classifier_grad = grad_classifier(scale, x_mod, label)
+    x_mod = x_mod + classifier_grad
+    
     if denoise:
         last_noise = (len(sigmas) - 1) * torch.ones(x_mod.shape[0], device=x_mod.device)
         last_noise = last_noise.long()
