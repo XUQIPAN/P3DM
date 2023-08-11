@@ -1,0 +1,5 @@
+1. original 
+'validation loss is 4.873258811360129 '
+'validation accuracy is 0.719343621753127 '
+
+2.improved

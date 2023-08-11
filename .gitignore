@@ -24,3 +24,6 @@ run.sh
 celeba_cls.pth
 train_celeba_x_exp_fake.pkl
 train_celeba_y_exp_fake.pkl
+output_original.png
+train_celeba_x_exp_fake_2.pkl
+train_celeba_y_exp_fake_2.pkl
