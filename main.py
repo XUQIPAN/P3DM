@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 7, 6, 5'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1, 2, 3, 4, 5'
 import argparse
 import traceback
 import time

@@ -45,7 +45,7 @@ def anneal_Langevin_dynamics(x_mod, label, scorenet, sigmas, n_steps_each=200, s
                 print("level: {}, step_size: {}, grad_norm: {}, image_norm: {}, snr: {}, grad_mean_norm: {}".format(
                     c, step_size, grad_norm.item(), image_norm.item(), snr.item(), grad_mean_norm.item()))
                 
-    scale = 1
+    scale = 5
     classifier_grad = grad_classifier(scale, x_mod, label)
     x_mod = x_mod + classifier_grad
     
