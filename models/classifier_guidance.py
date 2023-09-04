@@ -67,9 +67,7 @@ def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor)->float:
     gradient = grad_transform(gradient[0])
     # gradient shape: tuple(tensor)
     # print(gradient.shape)
-    variance = torch.var(init_samples, dim=(1, 2, 3)).cuda()
-    expanded_variance = variance.unsqueeze(1).unsqueeze(1).unsqueeze(1)
-    return scale * expanded_variance * gradient
+    return scale * gradient
 
 
 if __name__ == "__main__":
