@@ -1,5 +1,5 @@
 training:
-  batch_size: 128
+  batch_size: 64
   queue_size: 60000
   n_epochs: 500000
   n_iters: 300001
@@ -7,7 +7,7 @@ training:
   snapshot_sampling: true
   anneal_power: 2
   log_all_sigmas: false
-  k: 128
+  k: 64
   epsilon: 10
 
 sampling:
@@ -25,12 +25,12 @@ sampling:
   n_interpolations: 15
 
 fast_fid:
-  batch_size: 1000
-  num_samples: 1000
+  batch_size: 15
+  num_samples: 15
   step_lr: 0.0000033
   n_steps_each: 5
-  begin_ckpt: 5000
-  end_ckpt: 210000
+  begin_ckpt: 150000
+  end_ckpt: 300000
   verbose: false
   ensemble: false
 

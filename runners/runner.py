@@ -167,12 +167,12 @@ class Runner():
                             test_score = score
 
                         test_score.eval()
-                        init_samples = torch.rand(36, self.config.data.channels,
+                        init_samples = torch.rand(9, self.config.data.channels,
                                                   self.config.data.image_size, self.config.data.image_size,
                                                   device=self.config.device, requires_grad=True)
                         init_samples = data_transform(self.config, init_samples)
 
-                        all_samples = anneal_Langevin_dynamics(init_samples, y[:36, ...], test_score, sigmas.cpu().numpy(),
+                        all_samples = anneal_Langevin_dynamics(init_samples, y[:9, ...], test_score, sigmas.cpu().numpy(),
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,
@@ -184,7 +184,7 @@ class Runner():
 
                         sample = inverse_data_transform(self.config, sample)
 
-                        image_grid = make_grid(sample, 6)
+                        image_grid = make_grid(sample, 3)
                         save_image(image_grid,
                                    os.path.join(self.args.log_sample_path, 'image_grid_{}.png'.format(step)))
                         torch.save(sample, os.path.join(self.args.log_sample_path, 'samples_{}.pth'.format(step)))
@@ -192,5 +192,131 @@ class Runner():
                         del test_score
                         del all_samples
 
+    def fast_fid(self):
+        ### Test the fids of ensembled checkpoints.
+        ### Shouldn't be used for models with ema
+        if self.config.fast_fid.ensemble:
+            if self.config.model.ema:
+                raise RuntimeError("Cannot apply ensembling to models with EMA.")
+            self.fast_ensemble_fid()
+            return
+
+        from evaluation.fid_score import get_fid, get_fid_stats_path
+        import pickle
+        score = get_model(self.config)
+        score = torch.nn.DataParallel(score)
+
+        sigmas_th = get_sigmas(self.config)
+        sigmas = sigmas_th.cpu().numpy()
+
+        fids = {}
+        for ckpt in tqdm.tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
+                              desc="processing ckpt"):
+            states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
+                                map_location=self.config.device)
+
+            if self.config.model.ema:
+                ema_helper = EMAHelper(mu=self.config.model.ema_rate)
+                ema_helper.register(score)
+                ema_helper.load_state_dict(states[-1])
+                ema_helper.ema(score)
+            else:
+                score.load_state_dict(states[0])
+
+            score.eval()
+
+            num_iters = self.config.fast_fid.num_samples // self.config.fast_fid.batch_size
+            output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
+            os.makedirs(output_path, exist_ok=True)
+
+            dataset, _ = get_dataset(self.args, self.config)
+            label_loader = torch.utils.data.DataLoader(dataset, 
+                                                       batch_size=self.config.fast_fid.batch_size*2, 
+                                                       shuffle=True)
+            _, labels = next(iter(label_loader))
+            labels = labels[:, 20:21] # extract only gender label
+            indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
+            shuffle_labels = labels[indices]
+            for i in range(num_iters):
+                init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
+                                          self.config.data.image_size, self.config.data.image_size,
+                                          device=self.config.device, requires_grad=True)
+                init_samples = data_transform(self.config, init_samples)
+                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, score, sigmas,
+                                                       self.config.fast_fid.n_steps_each,
+                                                       self.config.fast_fid.step_lr,
+                                                       verbose=self.config.fast_fid.verbose,
+                                                       denoise=self.config.sampling.denoise)
+
+                final_samples = all_samples[-1]
+                for id, sample in enumerate(final_samples):
+                    sample = sample.view(self.config.data.channels,
+                                         self.config.data.image_size,
+                                         self.config.data.image_size)
+
+                    sample = inverse_data_transform(self.config, sample)
+
+                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(id)))
+
+            stat_path = get_fid_stats_path(self.args, self.config, download=True)
+            fid = get_fid(stat_path, output_path)
+            fids[ckpt] = fid
+            print("ckpt: {}, fid: {}".format(ckpt, fid))
+
+        with open(os.path.join(self.args.image_folder, 'fids.pickle'), 'wb') as handle:
+            pickle.dump(fids, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+    def is_score(self):
+        import pathlib
+        from evaluation.fid_score import get_activations
+        from evaluation.inception import InceptionV3
+        import pickle
+
+        # inception score test
+        base_path = os.path.join(self.args.exp, 'fid_samples', self.args.image_folder)
+        checkpoint_paths = os.listdir(base_path)
+
+        dims = 2048
+        block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
+        model = InceptionV3([block_idx])
+        if torch.cuda.is_available():
+            model.cuda()
+
+        inception_score_dict = {}
+        for path in checkpoint_paths:
+            ckpt_path = pathlib.Path(os.path.join(base_path, path))
+            if not path.endswith('.pickle'):
+                images_path = list(ckpt_path.glob('*.jpg')) + list(ckpt_path.glob('*.png'))
+
+            activations = get_activations(images_path, model, 50, dims, True)
+            activations = torch.from_numpy(activations)
+            # Calculate marginal distribution
+            p_yx = F.softmax(activations, dim=1).mean(dim=0)
+            
+             # Calculate scores for each image
+            scores = []
+            splits = 10
+
+            for i in range(splits):
+                # Randomly sample from the activations
+                part = activations[i * (activations.shape[0] // splits):(i + 1) * (activations.shape[0] // splits)]
+                # Calculate the conditional distribution
+                p_yx_i = F.softmax(part, dim=1).mean(dim=0)
+                # Calculate KL divergence
+                kl_div = (p_yx_i * (p_yx_i.log() - p_yx.log())).sum()
+                scores.append(torch.exp(kl_div).item())
+
+            # Calculate the Inception Score
+            inception_score = np.mean(scores)
+            inception_score_dict[ckpt_path] = inception_score
+            print("ckpt: {}, inception_score: {}".format(ckpt_path, inception_score))
+
+        with open(os.path.join(base_path, 'is_score.pickle'), 'wb') as handle:
+            pickle.dump(inception_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+            
+            
 
     

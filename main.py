@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 7, 6, 5'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4'
 import argparse
 import traceback
 import time
@@ -27,12 +27,14 @@ def parse_args_and_config():
     parser.add_argument('--test', action='store_true', help='Whether to test the model')
     parser.add_argument('--sample', action='store_true', help='Whether to produce samples from the model')
     parser.add_argument('--fast_fid', action='store_true', help='Whether to do fast fid test')
+    parser.add_argument('--is_score', action='store_true', help='Whether to do inception score test')
     parser.add_argument('--resume_training', action='store_true', help='Whether to resume training')
     parser.add_argument('-i', '--image_folder', type=str, default='images', help="The folder name of samples")
     parser.add_argument('--ni', action='store_true', help="No interaction. Suitable for Slurm Job launcher")
 
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, 'logs', args.doc)
+
     # parse config file
     with open(os.path.join('configs', args.config), 'r') as f:
         config = yaml.safe_load(f)
@@ -40,7 +42,7 @@ def parse_args_and_config():
 
     tb_path = os.path.join(args.exp, 'tensorboard', args.doc)
 
-    if not args.test and not args.sample:
+    if not args.test and not args.sample and not args.fast_fid and not args.is_score:
         if not args.resume_training:
             if os.path.exists(args.log_path):
                 overwrite = False
@@ -115,6 +117,25 @@ def parse_args_and_config():
                     print("Output image folder exists. Program halted.")
                     sys.exit(0)
 
+        elif args.fast_fid:
+            os.makedirs(os.path.join(args.exp, 'fid_samples'), exist_ok=True)
+            args.image_folder = os.path.join(args.exp, 'fid_samples', args.image_folder)
+            if not os.path.exists(args.image_folder):
+                os.makedirs(args.image_folder)
+            else:
+                overwrite = False
+                if args.ni:
+                    overwrite = False
+                else:
+                    response = input("Image folder already exists. \n "
+                                     "Type Y to delete and start from an empty folder?\n"
+                                     "Type N to overwrite existing folders (Y/N)")
+                    if response.upper() == 'Y':
+                        overwrite = True
+
+                if overwrite:
+                    shutil.rmtree(args.image_folder)
+                    os.makedirs(args.image_folder)
 
     # add device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -151,7 +172,7 @@ def main():
     logging.info("Config =")
     print(">" * 80)
     config_dict = copy.copy(vars(config))
-    if not args.test and not args.sample and not args.fast_fid:
+    if not args.test and not args.sample and not args.fast_fid and not args.is_score:
         del config_dict['tb_logger']
     print(yaml.dump(config_dict, default_flow_style=False))
     print("<" * 80)
@@ -162,6 +183,10 @@ def main():
             runner.test()
         elif args.sample:
             runner.sample()
+        elif args.fast_fid:
+            runner.fast_fid()
+        elif args.is_score:
+            runner.is_score()
         else:
             num_gpus_available = torch.cuda.device_count()
             print("Number of available GPUs:", num_gpus_available)
