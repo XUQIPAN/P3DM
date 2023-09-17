@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from models.net import RefineNet
 from datasets import get_dataset, data_transform, inverse_data_transform
 from losses import get_optimizer
-from models import anneal_Langevin_dynamics
+from models import anneal_Langevin_dynamics, anneal_Langevin_dynamics_original
 from models import get_sigmas
 from models.ema import EMAHelper
 
@@ -229,20 +229,20 @@ class Runner():
             output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
             os.makedirs(output_path, exist_ok=True)
 
-            dataset, _ = get_dataset(self.args, self.config)
+            '''dataset, _ = get_dataset(self.args, self.config)
             label_loader = torch.utils.data.DataLoader(dataset, 
                                                        batch_size=self.config.fast_fid.batch_size*2, 
                                                        shuffle=True)
             _, labels = next(iter(label_loader))
             labels = labels[:, 20:21] # extract only gender label
             indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
-            shuffle_labels = labels[indices]
+            shuffle_labels = labels[indices]'''
             for i in range(num_iters):
                 init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
-                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, score, sigmas,
+                all_samples = anneal_Langevin_dynamics_original(init_samples, score, sigmas,
                                                        self.config.fast_fid.n_steps_each,
                                                        self.config.fast_fid.step_lr,
                                                        verbose=self.config.fast_fid.verbose,
@@ -274,7 +274,7 @@ class Runner():
         import pickle
 
         # inception score test
-        base_path = os.path.join(self.args.exp, 'fid_samples', self.args.image_folder)
+        base_path = os.path.join(self.args.exp, 'fid_samples_larger', self.args.image_folder)
         checkpoint_paths = os.listdir(base_path)
 
         dims = 2048

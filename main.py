@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4'
+os.environ["CUDA_VISIBLE_DEVICES"] = '4, 5, 6, 7'
 import argparse
 import traceback
 import time
@@ -118,8 +118,8 @@ def parse_args_and_config():
                     sys.exit(0)
 
         elif args.fast_fid:
-            os.makedirs(os.path.join(args.exp, 'fid_samples'), exist_ok=True)
-            args.image_folder = os.path.join(args.exp, 'fid_samples', args.image_folder)
+            os.makedirs(os.path.join(args.exp, 'fid_samples_original_larger_batch'), exist_ok=True)
+            args.image_folder = os.path.join(args.exp, 'fid_samples_original_larger_batch', args.image_folder)
             if not os.path.exists(args.image_folder):
                 os.makedirs(args.image_folder)
             else:
