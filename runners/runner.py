@@ -1,6 +1,6 @@
 import numpy as np
 import glob
-import tqdm
+from tqdm import tqdm
 from losses.dsm import anneal_dsm_score_estimation
 from collections import deque
 import torch.nn.functional as F
@@ -11,7 +11,7 @@ from torchvision.transforms import ToPILImage
 from torchvision.utils import make_grid, save_image
 from torch.utils.data import DataLoader
 from models.net import RefineNet
-from datasets import get_dataset, data_transform, inverse_data_transform
+from datasets import get_dataset, get_dataset_simple, data_transform, inverse_data_transform
 from losses import get_optimizer
 from models import anneal_Langevin_dynamics, anneal_Langevin_dynamics_original
 from models import get_sigmas
@@ -36,6 +36,7 @@ class Runner():
         self.sample_buff = deque(maxlen=N)
         self.label_buff = deque(maxlen=N)
         self.sigma_buff = deque(maxlen=N)
+
 
     def train(self):
         dataset, test_dataset = get_dataset(self.args, self.config)
@@ -82,7 +83,7 @@ class Runner():
 
         for epoch in range(start_epoch, self.config.training.n_epochs):
             for i, (X, y) in enumerate(dataloader):
-                # shape of y : (16, 40)
+                # shape of y : (num_images, 40)
                 # gender attribute: male or not male
                 y = y[:, 20:21]
                 # print(y.shape)
@@ -167,12 +168,17 @@ class Runner():
                             test_score = score
 
                         test_score.eval()
-                        init_samples = torch.rand(9, self.config.data.channels,
+                        init_samples = torch.rand(self.config.training.sample_size, 
+                                                  self.config.data.channels,
                                                   self.config.data.image_size, self.config.data.image_size,
                                                   device=self.config.device, requires_grad=True)
                         init_samples = data_transform(self.config, init_samples)
+                        indices = torch.randperm(len(y))[self.config.training.sample_size]
+                        shuffle_labels = y[indices]
 
-                        all_samples = anneal_Langevin_dynamics(init_samples, y[:9, ...], test_score, sigmas.cpu().numpy(),
+                        all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels,
+                                                               self.config.private_attribute,
+                                                               test_score, sigmas.cpu().numpy(),
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,
@@ -191,6 +197,7 @@ class Runner():
 
                         del test_score
                         del all_samples
+
 
     def fast_fid(self):
         ### Test the fids of ensembled checkpoints.
@@ -229,20 +236,20 @@ class Runner():
             output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
             os.makedirs(output_path, exist_ok=True)
 
-            '''dataset, _ = get_dataset(self.args, self.config)
+            dataset, _ = get_dataset(self.args, self.config)
             label_loader = torch.utils.data.DataLoader(dataset, 
                                                        batch_size=self.config.fast_fid.batch_size*2, 
                                                        shuffle=True)
             _, labels = next(iter(label_loader))
             labels = labels[:, 20:21] # extract only gender label
             indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
-            shuffle_labels = labels[indices]'''
+            shuffle_labels = labels[indices]
             for i in range(num_iters):
                 init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
-                all_samples = anneal_Langevin_dynamics_original(init_samples, score, sigmas,
+                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, score, sigmas,
                                                        self.config.fast_fid.n_steps_each,
                                                        self.config.fast_fid.step_lr,
                                                        verbose=self.config.fast_fid.verbose,
@@ -267,6 +274,7 @@ class Runner():
             pickle.dump(fids, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
+
     def is_score(self):
         import pathlib
         from evaluation.fid_score import get_activations
@@ -274,7 +282,7 @@ class Runner():
         import pickle
 
         # inception score test
-        base_path = os.path.join(self.args.exp, 'fid_samples_larger', self.args.image_folder)
+        base_path = os.path.join(self.args.exp, 'fid_samples_larger_batch_2', self.args.image_folder)
         checkpoint_paths = os.listdir(base_path)
 
         dims = 2048
@@ -285,9 +293,10 @@ class Runner():
 
         inception_score_dict = {}
         for path in checkpoint_paths:
+            if path.endswith('.pickle'):
+                continue
             ckpt_path = pathlib.Path(os.path.join(base_path, path))
-            if not path.endswith('.pickle'):
-                images_path = list(ckpt_path.glob('*.jpg')) + list(ckpt_path.glob('*.png'))
+            images_path = list(ckpt_path.glob('*.jpg')) + list(ckpt_path.glob('*.png'))
 
             activations = get_activations(images_path, model, 50, dims, True)
             activations = torch.from_numpy(activations)
@@ -314,6 +323,97 @@ class Runner():
 
         with open(os.path.join(base_path, 'is_score.pickle'), 'wb') as handle:
             pickle.dump(inception_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+    def privacy_eval(self):
+        import pathlib
+        from evaluation.fid_score import get_activations
+        from evaluation.inception import InceptionV3
+        import pickle
+        from torchvision import transforms
+        from PIL import Image
+        from evaluation.privacy_eval import is_private 
+        
+
+        # privacy eval test
+        dataset_path = os.path.join(self.args.exp, 'datasets', 'celeba/celeba/img_align_celeba')
+        gtimages_path = os.listdir(dataset_path)
+        base_path = os.path.join(self.args.exp, 'fid_samples_original_larger_batch', self.args.image_folder)
+        checkpoint_paths = os.listdir(base_path)
+
+        dims = 2048
+        block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
+        model = InceptionV3([block_idx])
+        if torch.cuda.is_available():
+            model.cuda()
+
+        private_score_dict = {}
+        for path in checkpoint_paths:
+            if not path.endswith('ckpt_300000'):
+                continue
+            ckpt_path = pathlib.Path(os.path.join(base_path, path))
+            images_path = list(ckpt_path.glob('*.jpg')) + list(ckpt_path.glob('*.png'))
+
+            # private score init
+            private_score = 0
+            total_sample = 0
+            for id, image in enumerate(images_path):
+                # we just sample 40 images for each checkpoint
+                if id >= 40:
+                    break
+
+                image_list = [image]
+                print(image_list)
+                activations_gen = get_activations(image_list, model, 1, dims, True)
+                activations_gen = np.squeeze(activations_gen, axis=0)
+                # activation shape: (2048, )
+                min_dist = np.full_like(activations_gen, np.inf)
+                nearest_img_path = None
+
+                for gtimage_path in tqdm(gtimages_path):
+                    gt_image_list = [os.path.join(dataset_path, gtimage_path)]
+                    activations_real = get_activations(gt_image_list, model, 1, dims, True)
+                    activations_real = np.squeeze(activations_real, axis=0)
+                    # print(nearest_img_path)
+                    # Calculate L2 distance
+                    dist = np.linalg.norm(activations_gen - activations_real)
+                    if np.sum(dist) < np.sum(min_dist):
+                        min_dist = dist
+                        nearest_img_path = gt_image_list[0]
+
+                if nearest_img_path is not None:
+                    concat_images_path = [nearest_img_path, image]
+                    concat_images = [Image.open(path) for path in concat_images_path]
+                    # reshape ground truth image size
+                    transform = transforms.Compose([
+                        transforms.Resize((128, 128)),
+                        transforms.ToTensor(),
+                    ])
+                    concat_images = [transform(image) for image in concat_images]
+                    image_grid = make_grid(concat_images, 1)
+                    save_path = os.path.join(self.args.exp, 'fid_samples_original_larger_batch', 
+                                            'nearest_images_attractive', path)
+                    os.makedirs(save_path, exist_ok=True)
+                    save_image(image_grid, os.path.join(save_path, '{}.png'.format(id)))
+
+                    # calculate private score
+                    total_sample += 1
+                    print(concat_images[0].unsqueeze(0).shape)
+                    print(concat_images[1].unsqueeze(0).shape)
+                    private_score += is_private(concat_images[0].unsqueeze(0).cuda(), 
+                                                concat_images[1].unsqueeze(0).cuda())
+            
+            print("ckpt: {}, private_score: {}".format(ckpt_path, private_score/total_sample))
+            private_score_dict[ckpt_path] = private_score/total_sample
+        
+        with open(os.path.join(base_path, 'private_score.pickle'), 'wb') as handle:
+            pickle.dump(private_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+            
+                
+            
 
 
             

@@ -3,3 +3,5 @@
 'validation accuracy is 0.719343621753127 '
 
 2.improved
+'validation loss is 6.590628381206815 '
+'validation accuracy is 0.7468053473570393 '

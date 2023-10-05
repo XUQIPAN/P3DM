@@ -2,7 +2,7 @@ import os
 import torch
 import torchvision.transforms as transforms
 from torchvision.datasets import CIFAR10, LSUN, FashionMNIST, MNIST
-from datasets.celeba import CelebA
+from datasets.celeba import CelebA, CelebASimple
 # from datasets.ffhq import FFHQ
 from torch.utils.data import Subset
 import numpy as np
@@ -69,6 +69,20 @@ def get_dataset(args, config):
   
 
     return dataset, test_dataset
+
+
+def get_dataset_simple(args, config):
+    transform=transforms.Compose([
+            transforms.CenterCrop(140),
+            transforms.Resize(config.data.image_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+    ])
+    
+    dataset = CelebASimple(root_dir= os.path.join(args.exp, 'datasets', 'celeba'), 
+                           transform=transform)
+    return dataset
+
 
 def logit_transform(image, lam=1e-6):
     image = lam + (1 - 2 * lam) * image

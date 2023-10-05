@@ -4,6 +4,7 @@ training:
   n_epochs: 500000
   n_iters: 300001
   snapshot_freq: 5000
+  sample_size: 9
   snapshot_sampling: true
   anneal_power: 2
   log_all_sigmas: false
@@ -23,13 +24,14 @@ sampling:
   inpainting: false
   interpolation: false
   n_interpolations: 15
+  private_attribute: attractive
 
 fast_fid:
   batch_size: 1000
   num_samples: 1000
   step_lr: 0.0000033
   n_steps_each: 5
-  begin_ckpt: 300000
+  begin_ckpt: 280000
   end_ckpt: 300000
   verbose: false
   ensemble: false

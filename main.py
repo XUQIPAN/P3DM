@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '4, 5, 6, 7'
+os.environ["CUDA_VISIBLE_DEVICES"] = '4, 5, 6'
 import argparse
 import traceback
 import time
@@ -29,6 +29,7 @@ def parse_args_and_config():
     parser.add_argument('--fast_fid', action='store_true', help='Whether to do fast fid test')
     parser.add_argument('--is_score', action='store_true', help='Whether to do inception score test')
     parser.add_argument('--resume_training', action='store_true', help='Whether to resume training')
+    parser.add_argument('--privacy_eval', action='store_true', help='Whether to do privacy evaluation')
     parser.add_argument('-i', '--image_folder', type=str, default='images', help="The folder name of samples")
     parser.add_argument('--ni', action='store_true', help="No interaction. Suitable for Slurm Job launcher")
 
@@ -42,7 +43,7 @@ def parse_args_and_config():
 
     tb_path = os.path.join(args.exp, 'tensorboard', args.doc)
 
-    if not args.test and not args.sample and not args.fast_fid and not args.is_score:
+    if not args.test and not args.sample and not args.fast_fid and not args.is_score and not args.privacy_eval:
         if not args.resume_training:
             if os.path.exists(args.log_path):
                 overwrite = False
@@ -118,8 +119,8 @@ def parse_args_and_config():
                     sys.exit(0)
 
         elif args.fast_fid:
-            os.makedirs(os.path.join(args.exp, 'fid_samples_original_larger_batch'), exist_ok=True)
-            args.image_folder = os.path.join(args.exp, 'fid_samples_original_larger_batch', args.image_folder)
+            os.makedirs(os.path.join(args.exp, 'fid_samples_larger_batch_2'), exist_ok=True)
+            args.image_folder = os.path.join(args.exp, 'fid_samples_larger_batch_2', args.image_folder)
             if not os.path.exists(args.image_folder):
                 os.makedirs(args.image_folder)
             else:
@@ -172,7 +173,7 @@ def main():
     logging.info("Config =")
     print(">" * 80)
     config_dict = copy.copy(vars(config))
-    if not args.test and not args.sample and not args.fast_fid and not args.is_score:
+    if not args.test and not args.sample and not args.fast_fid and not args.is_score and not args.privacy_eval:
         del config_dict['tb_logger']
     print(yaml.dump(config_dict, default_flow_style=False))
     print("<" * 80)
@@ -187,14 +188,9 @@ def main():
             runner.fast_fid()
         elif args.is_score:
             runner.is_score()
+        elif args.privacy_eval:
+            runner.privacy_eval()
         else:
-            num_gpus_available = torch.cuda.device_count()
-            print("Number of available GPUs:", num_gpus_available)
-
-            # Get the GPU numbers in the system
-            gpu_numbers = [torch.cuda.get_device_properties(i) for i in range(num_gpus_available)]
-            print("GPU numbers in the system:", gpu_numbers)
-            print("Current device ", torch.cuda.current_device())
             runner.train()
     except:
         logging.error(traceback.format_exc())

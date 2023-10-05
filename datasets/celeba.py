@@ -3,6 +3,10 @@ import os
 import PIL
 from .vision import VisionDataset
 from .utils import download_file_from_google_drive, check_integrity
+from PIL import Image
+from torchvision import transforms
+from torch.utils.data import Dataset
+import os
 
 
 class CelebA(VisionDataset):
@@ -161,3 +165,27 @@ class CelebA(VisionDataset):
     def extra_repr(self):
         lines = ["Target type: {target_type}", "Split: {split}"]
         return '\n'.join(lines).format(**self.__dict__)
+
+
+
+
+class CelebASimple(Dataset):
+    base_folder = "celeba"
+
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.image_list = os.listdir(os.path.join(self.root_dir, self.base_folder, "img_align_celeba"))
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.image_list)
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.root_dir, self.base_folder, "img_align_celeba", self.image_list[idx])
+        image = Image.open(img_name)
+        
+        if self.transform:
+            image = self.transform(image)
+            
+        return image
+

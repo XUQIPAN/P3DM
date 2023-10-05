@@ -17,24 +17,25 @@ def get_sigmas(config):
 
     return sigmas
 
-def anneal_Langevin_dynamics(x_mod, label, scorenet, sigmas, n_steps_each=200, step_lr=0.000008,
+
+def anneal_Langevin_dynamics(x_mod, label, attribute, scorenet, sigmas, n_steps_each=200, step_lr=0.000008,
                              final_only=False, verbose=False, denoise=True):
     images = []
 
     for c, sigma in enumerate(sigmas):
-        labels = torch.ones(x_mod.shape[0], device=x_mod.device) * c
-        labels = labels.long()
+        score_labels = torch.ones(x_mod.shape[0], device=x_mod.device) * c
+        score_labels = score_labels.long()
         step_size = step_lr * (sigma / sigmas[-1]) ** 2
         for s in range(n_steps_each):
             with torch.no_grad():
-                grad = scorenet(x_mod, labels)
+                grad = scorenet(x_mod, score_labels)
 
                 noise = torch.randn_like(x_mod)
                 grad_norm = torch.norm(grad.view(grad.shape[0], -1), dim=-1).mean()
                 noise_norm = torch.norm(noise.view(noise.shape[0], -1), dim=-1).mean()
 
             scale = 0.01
-            classifier_grad = grad_classifier(scale, x_mod, label)
+            classifier_grad = grad_classifier(scale, x_mod, label, attribute)
             x_mod = x_mod + step_size * grad + noise * np.sqrt(step_size * 2) + classifier_grad
 
             image_norm = torch.norm(x_mod.view(x_mod.shape[0], -1), dim=-1).mean()
