@@ -84,9 +84,14 @@ class Runner():
         for epoch in range(start_epoch, self.config.training.n_epochs):
             for i, (X, y) in enumerate(dataloader):
                 # shape of y : (num_images, 40)
-                # gender attribute: male or not male
-                y = y[:, 20:21]
-                # print(y.shape)
+                # attribute selection
+                if self.config.sampling.private_attribute == 'gender':
+                    y = y[:, 20:21]
+                elif self.config.sampling.private_attribute == 'smile':
+                    y = y[:, 31:32]
+                else:
+                    y = y[:, 2:3]
+                print(y.shape)
                 # target = torch.eye(2)[y].squeeze().cuda()
                 # print(target.shape)
                 score.train()
@@ -173,11 +178,13 @@ class Runner():
                                                   self.config.data.image_size, self.config.data.image_size,
                                                   device=self.config.device, requires_grad=True)
                         init_samples = data_transform(self.config, init_samples)
-                        indices = torch.randperm(len(y))[self.config.training.sample_size]
+                        indices = torch.randperm(len(y))[:self.config.training.sample_size]
+                        print(indices)
                         shuffle_labels = y[indices]
+                        print(shuffle_labels.shape)
 
                         all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels,
-                                                               self.config.private_attribute,
+                                                               self.config.sampling.private_attribute,
                                                                test_score, sigmas.cpu().numpy(),
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
@@ -241,9 +248,15 @@ class Runner():
                                                        batch_size=self.config.fast_fid.batch_size*2, 
                                                        shuffle=True)
             _, labels = next(iter(label_loader))
-            labels = labels[:, 20:21] # extract only gender label
+            if self.config.sampling.private_attribute == 'gender':
+                    labels = labels[:, 20:21]
+            elif self.config.sampling.private_attribute == 'smile':
+                    labels = labels[:, 31:32]
+            else:
+                    labels = labels[:, 2:3]
             indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
             shuffle_labels = labels[indices]
+
             for i in range(num_iters):
                 init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,

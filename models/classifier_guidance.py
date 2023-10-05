@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms
 import numpy as np
-import classifier_models
+from models.classifier_models import *
 
 
 def check_cuda():
@@ -21,14 +21,14 @@ def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor, attribute:str)->f
 
     is_cuda = check_cuda()
     if attribute == 'gender' or attribute == 'attractive':
-        model = classifier_models.MultiClassifier()
+        model = MultiClassifier()
         if attribute == 'gender':
             model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_gender.pth'))
         else:
-            model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_attractive.pth'))
+            model.load_state_dict(torch.load('/workspace/celeba_cls_attractive.pth'))
     elif attribute == 'smile':
-        model = classifier_models.CustomResNet18Model(num_classes=2)
-        model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_smile.pth'))
+        model = CustomResNet18Model(num_classes=2)
+        model.load_state_dict(torch.load('/workspace/celeba_cls_smile.pth'))
     if is_cuda:
         model.cuda()
 
