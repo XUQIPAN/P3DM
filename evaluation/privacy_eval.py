@@ -20,12 +20,19 @@ from .inception import InceptionV3
 from .fid_score import get_activations
 import pathlib
 import pickle
-from models.classifier_guidance import MultiClassifier
+from models.classifier_guidance import MultiClassifier, CustomResNet18Model
 from torch import nn
 
-def is_private(image1, image2):
-    model = MultiClassifier()
-    model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_attractive.pth'))
+def is_private(image1, image2, attribute='gender'):
+    if attribute == 'gender' or attribute == 'attractive':
+        model = MultiClassifier()
+        if attribute == 'gender':
+            model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_gender.pth'))
+        else:
+            model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_attractive.pth'))
+    elif attribute == 'smile':
+        model = CustomResNet18Model(num_classes=2)
+        model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_smile.pth'))
     model.cuda()
     attr1 = model(image1)
     attr2 = model(image2)
