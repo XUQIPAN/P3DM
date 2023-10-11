@@ -67,3 +67,36 @@ class CustomResNet18Model(nn.Module):
         # Classification head
         x = self.class_head(x)
         return x
+    
+
+
+class CustomResNet50Model(nn.Module):
+    def __init__(self, num_classes):
+        super(CustomResNet50Model, self).__init__()
+        
+        # Load the pretrained ResNet-50 model + higher level layers
+        self.resnet50 = models.resnet50(pretrained=True)
+        
+        # Remove the final layer (classification head of original ResNet50)
+        # To keep the feature extraction layers only
+        self.features = nn.Sequential(*list(self.resnet50.children())[:-1])
+        
+        # Freeze the parameters of ResNet50 (make them non-trainable)
+        for param in self.features.parameters():
+            param.requires_grad = False
+        
+        # Define new classification head
+        self.class_head = nn.Sequential(
+            nn.Linear(self.resnet50.fc.in_features, num_classes), 
+            nn.Softmax(dim=1)
+        )
+        
+    def forward(self, x):
+        x = self.features(x)
+        
+        # Global Average Pooling (GAP) layer
+        x = x.mean([2, 3])
+        
+        # Classification head
+        x = self.class_head(x)
+        return x

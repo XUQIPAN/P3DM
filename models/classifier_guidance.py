@@ -27,8 +27,8 @@ def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor, attribute:str)->f
         else:
             model.load_state_dict(torch.load('/workspace/celeba_cls_attractive.pth'))
     elif attribute == 'smile':
-        model = CustomResNet18Model(num_classes=2)
-        model.load_state_dict(torch.load('/workspace/celeba_cls_smile.pth'))
+        model = CustomResNet50Model(num_classes=2)
+        model.load_state_dict(torch.load('/workspace/celeba_cls_smile_50.pth'))
     if is_cuda:
         model.cuda()
 
