@@ -169,23 +169,3 @@ class CelebA(VisionDataset):
 
 
 
-class CelebASimple(Dataset):
-    base_folder = "celeba"
-
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
-        self.image_list = os.listdir(os.path.join(self.root_dir, self.base_folder, "img_align_celeba"))
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.image_list)
-
-    def __getitem__(self, idx):
-        img_name = os.path.join(self.root_dir, self.base_folder, "img_align_celeba", self.image_list[idx])
-        image = Image.open(img_name)
-        
-        if self.transform:
-            image = self.transform(image)
-            
-        return image
-

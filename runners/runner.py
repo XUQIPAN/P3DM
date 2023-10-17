@@ -11,7 +11,7 @@ from torchvision.transforms import ToPILImage
 from torchvision.utils import make_grid, save_image
 from torch.utils.data import DataLoader
 from models.net import RefineNet
-from datasets import get_dataset, get_dataset_simple, data_transform, inverse_data_transform
+from datasets import get_dataset, data_transform, inverse_data_transform
 from losses import get_optimizer
 from models import anneal_Langevin_dynamics, anneal_Langevin_dynamics_original
 from models import get_sigmas
@@ -91,7 +91,6 @@ class Runner():
                     y = y[:, 31:32]
                 else:
                     y = y[:, 2:3]
-                print(y.shape)
                 # target = torch.eye(2)[y].squeeze().cuda()
                 # print(target.shape)
                 score.train()
@@ -179,12 +178,9 @@ class Runner():
                                                   device=self.config.device, requires_grad=True)
                         init_samples = data_transform(self.config, init_samples)
                         indices = torch.randperm(len(y))[:self.config.training.sample_size]
-                        print(indices)
                         shuffle_labels = y[indices]
-                        print(shuffle_labels.shape)
 
-                        all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels,
-                                                               self.config.sampling.private_attribute,
+                        all_samples = anneal_Langevin_dynamics_original(init_samples,
                                                                test_score, sigmas.cpu().numpy(),
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
@@ -224,9 +220,9 @@ class Runner():
         sigmas = sigmas_th.cpu().numpy()
 
         fids = {}
-        for ckpt in tqdm.tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
+        for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
                               desc="processing ckpt"):
-            states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
+            '''states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
                                 map_location=self.config.device)
 
             if self.config.model.ema:
@@ -237,11 +233,12 @@ class Runner():
             else:
                 score.load_state_dict(states[0])
 
-            score.eval()
+            score.eval()'''
 
             num_iters = self.config.fast_fid.num_samples // self.config.fast_fid.batch_size
-            output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
-            os.makedirs(output_path, exist_ok=True)
+            # output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
+            output_path = '/data/local/qipan/exp_celeba/fid_samples_larger_batch_2/images/smile/ckpt_300000'
+            '''os.makedirs(output_path, exist_ok=True)
 
             dataset, _ = get_dataset(self.args, self.config)
             label_loader = torch.utils.data.DataLoader(dataset, 
@@ -255,14 +252,16 @@ class Runner():
             else:
                     labels = labels[:, 2:3]
             indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
-            shuffle_labels = labels[indices]
+            shuffle_labels = labels[indices]'''
 
             for i in range(num_iters):
-                init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
+                '''init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
-                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, score, sigmas,
+                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
+                                                       self.config.sampling.private_attribute,
+                                                       score, sigmas,
                                                        self.config.fast_fid.n_steps_each,
                                                        self.config.fast_fid.step_lr,
                                                        verbose=self.config.fast_fid.verbose,
@@ -276,7 +275,7 @@ class Runner():
 
                     sample = inverse_data_transform(self.config, sample)
 
-                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(id)))
+                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(id)))'''
 
             stat_path = get_fid_stats_path(self.args, self.config, download=True)
             fid = get_fid(stat_path, output_path)
@@ -295,7 +294,7 @@ class Runner():
         import pickle
 
         # inception score test
-        base_path = os.path.join(self.args.exp, 'fid_samples_larger_batch_2', self.args.image_folder)
+        base_path = '/data/local/qipan/exp_celeba/fid_samples_larger_batch_2/images/smile'
         checkpoint_paths = os.listdir(base_path)
 
         dims = 2048
@@ -306,6 +305,7 @@ class Runner():
 
         inception_score_dict = {}
         for path in checkpoint_paths:
+            print(path)
             if path.endswith('.pickle'):
                 continue
             ckpt_path = pathlib.Path(os.path.join(base_path, path))
@@ -352,7 +352,7 @@ class Runner():
         # privacy eval test
         dataset_path = os.path.join(self.args.exp, 'datasets', 'celeba/celeba/img_align_celeba')
         gtimages_path = os.listdir(dataset_path)
-        base_path = os.path.join(self.args.exp, 'fid_samples_original_larger_batch', self.args.image_folder)
+        base_path = os.path.join(self.args.exp, 'fid_samples_larger_batch_2', self.args.image_folder, 'smile')
         checkpoint_paths = os.listdir(base_path)
 
         dims = 2048
@@ -405,8 +405,8 @@ class Runner():
                     ])
                     concat_images = [transform(image) for image in concat_images]
                     image_grid = make_grid(concat_images, 1)
-                    save_path = os.path.join(self.args.exp, 'fid_samples_original_larger_batch', 
-                                            'nearest_images_attractive', path)
+                    save_path = os.path.join(self.args.exp, 'fid_samples_larger_batch_2', 
+                                            'nearest_images_smile_2', path)
                     os.makedirs(save_path, exist_ok=True)
                     save_image(image_grid, os.path.join(save_path, '{}.png'.format(id)))
 
@@ -415,12 +415,13 @@ class Runner():
                     print(concat_images[0].unsqueeze(0).shape)
                     print(concat_images[1].unsqueeze(0).shape)
                     private_score += is_private(concat_images[0].unsqueeze(0).cuda(), 
-                                                concat_images[1].unsqueeze(0).cuda())
+                                                concat_images[1].unsqueeze(0).cuda(),
+                                                self.config.sampling.private_attribute)
             
             print("ckpt: {}, private_score: {}".format(ckpt_path, private_score/total_sample))
             private_score_dict[ckpt_path] = private_score/total_sample
         
-        with open(os.path.join(base_path, 'private_score.pickle'), 'wb') as handle:
+        with open(os.path.join(base_path, 'private_score_smile.pickle'), 'wb') as handle:
             pickle.dump(private_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
