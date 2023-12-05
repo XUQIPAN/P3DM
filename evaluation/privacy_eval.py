@@ -113,11 +113,11 @@ if __name__ == "__main__":
             return x
     
     
-    model = MultiClassifier()
-    model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_attractive.pth'))
+    model = CustomResNet50Model(num_classes=2)
+    model.load_state_dict(torch.load('/data/local/qipan/exp_celeba/celeba_cls_smile_50.pth'))
     model.eval()
     model.cuda()
-    image_dir = "/data/local/qipan/exp_celeba/fid_samples_original_larger_batch/nearest_images_attractive/ckpt_300000"
+    image_dir = "/data/local/qipan/exp_celeba/dpdm_samples/nearest_image/smile"
     image_paths = glob(os.path.join(image_dir, "*.png"))
 
     transform=transforms.Compose([

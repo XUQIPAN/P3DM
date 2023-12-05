@@ -28,3 +28,6 @@ output_original.png
 train_celeba_x_exp_fake_2.pkl
 train_celeba_y_exp_fake_2.pkl
 output_final.png
+combined_image.jpg
+combined_image2.jpg
+image_grid.ipynb

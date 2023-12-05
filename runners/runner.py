@@ -222,7 +222,7 @@ class Runner():
         fids = {}
         for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
                               desc="processing ckpt"):
-            '''states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
+            states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
                                 map_location=self.config.device)
 
             if self.config.model.ema:
@@ -233,12 +233,12 @@ class Runner():
             else:
                 score.load_state_dict(states[0])
 
-            score.eval()'''
+            score.eval()
 
             num_iters = self.config.fast_fid.num_samples // self.config.fast_fid.batch_size
             # output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
-            output_path = '/data/local/qipan/exp_celeba/fid_samples_larger_batch_2/images/smile/ckpt_300000'
-            '''os.makedirs(output_path, exist_ok=True)
+            output_path = '/data/local/qipan/exp_celeba/dpdm_samples/samples'
+            os.makedirs(output_path, exist_ok=True)
 
             dataset, _ = get_dataset(self.args, self.config)
             label_loader = torch.utils.data.DataLoader(dataset, 
@@ -252,10 +252,10 @@ class Runner():
             else:
                     labels = labels[:, 2:3]
             indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
-            shuffle_labels = labels[indices]'''
+            shuffle_labels = labels[indices]
 
             for i in range(num_iters):
-                '''init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
+                init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
@@ -275,7 +275,7 @@ class Runner():
 
                     sample = inverse_data_transform(self.config, sample)
 
-                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(id)))'''
+                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(id)))
 
             stat_path = get_fid_stats_path(self.args, self.config, download=True)
             fid = get_fid(stat_path, output_path)
@@ -294,7 +294,7 @@ class Runner():
         import pickle
 
         # inception score test
-        base_path = '/data/local/qipan/exp_celeba/fid_samples_larger_batch_2/images/smile'
+        base_path = '/data/local/qipan/exp_celeba/dpdm_samples'
         checkpoint_paths = os.listdir(base_path)
 
         dims = 2048
@@ -352,8 +352,7 @@ class Runner():
         # privacy eval test
         dataset_path = os.path.join(self.args.exp, 'datasets', 'celeba/celeba/img_align_celeba')
         gtimages_path = os.listdir(dataset_path)
-        base_path = os.path.join(self.args.exp, 'fid_samples_larger_batch_2', self.args.image_folder, 'smile')
-        checkpoint_paths = os.listdir(base_path)
+        base_path = '/data/local/qipan/exp_celeba/dpdm_samples/samples'
 
         dims = 2048
         block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
@@ -362,66 +361,62 @@ class Runner():
             model.cuda()
 
         private_score_dict = {}
-        for path in checkpoint_paths:
-            if not path.endswith('ckpt_300000'):
-                continue
-            ckpt_path = pathlib.Path(os.path.join(base_path, path))
-            images_path = list(ckpt_path.glob('*.jpg')) + list(ckpt_path.glob('*.png'))
+        images_path = list(pathlib.Path(base_path).glob('*.jpg')) + list(pathlib.Path(base_path).glob('*.png'))
 
-            # private score init
-            private_score = 0
-            total_sample = 0
-            for id, image in enumerate(images_path):
-                # we just sample 40 images for each checkpoint
-                if id >= 40:
-                    break
+        # private score init
+        private_score = 0
+        total_sample = 0
+        for id, image in enumerate(images_path):
+            # we just sample 40 images for each checkpoint
+            if id >= 40:
+                break
 
-                image_list = [image]
-                print(image_list)
-                activations_gen = get_activations(image_list, model, 1, dims, True)
-                activations_gen = np.squeeze(activations_gen, axis=0)
-                # activation shape: (2048, )
-                min_dist = np.full_like(activations_gen, np.inf)
-                nearest_img_path = None
+            image_list = [image]
+            print(image_list)
+            activations_gen = get_activations(image_list, model, 1, dims, True)
+            activations_gen = np.squeeze(activations_gen, axis=0)
+            # activation shape: (2048, )
+            min_dist = np.full_like(activations_gen, np.inf)
+            nearest_img_path = None
 
-                for gtimage_path in tqdm(gtimages_path):
-                    gt_image_list = [os.path.join(dataset_path, gtimage_path)]
-                    activations_real = get_activations(gt_image_list, model, 1, dims, True)
-                    activations_real = np.squeeze(activations_real, axis=0)
-                    # print(nearest_img_path)
-                    # Calculate L2 distance
-                    dist = np.linalg.norm(activations_gen - activations_real)
-                    if np.sum(dist) < np.sum(min_dist):
-                        min_dist = dist
-                        nearest_img_path = gt_image_list[0]
+            for gtimage_path in tqdm(gtimages_path):
+                gt_image_list = [os.path.join(dataset_path, gtimage_path)]
+                activations_real = get_activations(gt_image_list, model, 1, dims, True)
+                activations_real = np.squeeze(activations_real, axis=0)
+                # print(nearest_img_path)
+                # Calculate L2 distance
+                dist = np.linalg.norm(activations_gen - activations_real)
+                if np.sum(dist) < np.sum(min_dist):
+                    min_dist = dist
+                    nearest_img_path = gt_image_list[0]
 
-                if nearest_img_path is not None:
-                    concat_images_path = [nearest_img_path, image]
-                    concat_images = [Image.open(path) for path in concat_images_path]
-                    # reshape ground truth image size
-                    transform = transforms.Compose([
-                        transforms.Resize((128, 128)),
-                        transforms.ToTensor(),
-                    ])
-                    concat_images = [transform(image) for image in concat_images]
-                    image_grid = make_grid(concat_images, 1)
-                    save_path = os.path.join(self.args.exp, 'fid_samples_larger_batch_2', 
-                                            'nearest_images_smile_2', path)
-                    os.makedirs(save_path, exist_ok=True)
-                    save_image(image_grid, os.path.join(save_path, '{}.png'.format(id)))
+            if nearest_img_path is not None:
+                concat_images_path = [nearest_img_path, image]
+                concat_images = [Image.open(path) for path in concat_images_path]
+                # reshape ground truth image size
+                transform = transforms.Compose([
+                    transforms.Resize((128, 128)),
+                    transforms.ToTensor(),
+                ])
+                concat_images = [transform(image) for image in concat_images]
+                image_grid = make_grid(concat_images, 1)
+                save_path = os.path.join(self.args.exp, 'dpdm_samples', 
+                                        'nearest_image', self.config.sampling.private_attribute)
+                os.makedirs(save_path, exist_ok=True)
+                save_image(image_grid, os.path.join(save_path, '{}.png'.format(id)))
 
-                    # calculate private score
-                    total_sample += 1
-                    print(concat_images[0].unsqueeze(0).shape)
-                    print(concat_images[1].unsqueeze(0).shape)
-                    private_score += is_private(concat_images[0].unsqueeze(0).cuda(), 
-                                                concat_images[1].unsqueeze(0).cuda(),
-                                                self.config.sampling.private_attribute)
-            
-            print("ckpt: {}, private_score: {}".format(ckpt_path, private_score/total_sample))
-            private_score_dict[ckpt_path] = private_score/total_sample
+                # calculate private score
+                total_sample += 1
+                print(concat_images[0].unsqueeze(0).shape)
+                print(concat_images[1].unsqueeze(0).shape)
+                private_score += is_private(concat_images[0].unsqueeze(0).cuda(), 
+                                            concat_images[1].unsqueeze(0).cuda(),
+                                            self.config.sampling.private_attribute)
         
-        with open(os.path.join(base_path, 'private_score_smile.pickle'), 'wb') as handle:
+        print("ckpt: {}, private_score: {}".format("dpdm", private_score/total_sample))
+        private_score_dict["dpdm"] = private_score/total_sample
+        
+        with open(os.path.join(save_path, '{}.pickle'.format(self.config.sampling.private_attribute)), 'wb') as handle:
             pickle.dump(private_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
