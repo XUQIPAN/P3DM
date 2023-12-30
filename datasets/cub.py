@@ -40,8 +40,8 @@ class CUB(VisionDataset):
     # right now.
     file_list = [
         # File ID                         Filename
-        ("1hERD-FSvEndnKc3cyjmHOD8VpxCqBpsg", "images.zip"),
-        ("1ZxUUNGV2DDmeM0ZTVhI_nABH2U4VKQKe", "crop_images.txt"),
+        ("10AA5B4PurqpAUYXcMMzG9NguPmeiBiiv", "crop_images.zip"),
+        ("1ZxUUNGV2DDmeM0ZTVhI_nABH2U4VKQKe", "images.txt"),
         ("1lpAKhNsFm3m7W2qcKv52usVhpS1txOWM", "91_train_test_split.txt")
     ]
 
@@ -73,9 +73,9 @@ class CUB(VisionDataset):
         if split.lower() == "train":
             split = 0
         elif split.lower() == "valid":
-            split = 1
-        elif split.lower() == "test":
             split = 2
+        elif split.lower() == "test":
+            split = 1
         else:
             raise ValueError('Wrong split entered! Please use split="train" '
                              'or split="valid" or split="test"')

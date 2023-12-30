@@ -73,7 +73,7 @@ def get_dataset(args, config):
         if config.data.random_flip:
             dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='train',
                           transform=transforms.Compose([
-                              transforms.CenterCrop(140),
+                              #transforms.CenterCrop(140),
                               transforms.Resize(config.data.image_size),
                               transforms.RandomHorizontalFlip(),
                               transforms.ToTensor(),
@@ -81,14 +81,14 @@ def get_dataset(args, config):
         else:
             dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='train',
                           transform=transforms.Compose([
-                              transforms.CenterCrop(140),
+                              #transforms.CenterCrop(140),
                               transforms.Resize(config.data.image_size),
                               transforms.ToTensor(),
                           ]), download=True)
 
         test_dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='test',
                            transform=transforms.Compose([
-                               transforms.CenterCrop(140),
+                               #transforms.CenterCrop(140),
                                transforms.Resize(config.data.image_size),
                                transforms.ToTensor(),
                            ]), download=True)

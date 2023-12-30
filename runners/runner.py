@@ -20,7 +20,7 @@ from models.ema import EMAHelper
 
 
 def get_model(config):
-    if config.data.dataset == 'CIFAR10' or config.data.dataset == 'CELEBA' or config.data.dataset == 'FashionMNIST' or config.data.dataset == 'MNIST':
+    if config.data.dataset == 'CIFAR10' or config.data.dataset == 'CELEBA' or config.data.dataset == 'FashionMNIST' or config.data.dataset == 'MNIST' or config.data.dataset == 'CUB':
         return RefineNet(config).to(config.device)
 
 # +
@@ -40,6 +40,7 @@ class Runner():
 
     def train(self):
         dataset, test_dataset = get_dataset(self.args, self.config)
+
         # show one of the ground truth image samples
         train_loader = torch.utils.data.DataLoader(dataset, batch_size=36, shuffle=True)
         images, _ = next(iter(train_loader))
@@ -85,12 +86,12 @@ class Runner():
             for i, (X, y) in enumerate(dataloader):
                 # shape of y : (num_images, 40)
                 # attribute selection
-                if self.config.sampling.private_attribute == 'gender':
-                    y = y[:, 20:21]
-                elif self.config.sampling.private_attribute == 'smile':
-                    y = y[:, 31:32]
-                else:
-                    y = y[:, 2:3]
+                #if self.config.sampling.private_attribute == 'gender':
+                #    y = y[:, 20:21]
+                #elif self.config.sampling.private_attribute == 'smile':
+                #    y = y[:, 31:32]
+                #else:
+                #    y = y[:, 2:3]
                 # target = torch.eye(2)[y].squeeze().cuda()
                 # print(target.shape)
                 score.train()
