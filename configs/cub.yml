@@ -1,5 +1,5 @@
 training:
-  batch_size: 4 # for testing
+  batch_size: 64 # for testing
   queue_size: 60000
   n_epochs: 500000
   n_iters: 300001
@@ -8,7 +8,7 @@ training:
   snapshot_sampling: true
   anneal_power: 2
   log_all_sigmas: false
-  k: 4 # for testing
+  k: 64 # for testing
   epsilon: 1
 
 sampling:
@@ -50,7 +50,7 @@ data:
   gaussian_dequantization: false
   random_flip: true
   rescaled: false
-  num_workers: 2 # for testing
+  num_workers: 32 # for testing
   privacy_eval : True
 
 model:
