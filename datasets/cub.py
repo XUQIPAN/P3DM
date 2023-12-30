@@ -40,10 +40,11 @@ class CUB(VisionDataset):
     # right now.
     file_list = [
         # File ID                         Filename
-        ("1AUzo7HtqdFh0QDoGYH4WMrEZ-AoilvBJ", "images.zip"),
-        ("1ZxUUNGV2DDmeM0ZTVhI_nABH2U4VKQKe", "images.txt"),
+        ("1hERD-FSvEndnKc3cyjmHOD8VpxCqBpsg", "images.zip"),
+        ("1ZxUUNGV2DDmeM0ZTVhI_nABH2U4VKQKe", "crop_images.txt"),
         ("1lpAKhNsFm3m7W2qcKv52usVhpS1txOWM", "91_train_test_split.txt")
     ]
+
     def __init__(self, root,
                  split="train",
                  target_type="attr",
@@ -102,7 +103,7 @@ class CUB(VisionDataset):
                 gdown.download(url, os.path.join(self.root, self.base_folder, filename), quiet=False)
 
         if not os.path.exists(os.path.join(self.root, self.base_folder, 'images')):
-            with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "images.zip"), "r") as f:
+            with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "crop_images.zip"), "r") as f:
                 f.extractall(os.path.join(self.root, self.base_folder))
 
     def __getitem__(self, index):

@@ -3,9 +3,11 @@ import torch
 import torchvision.transforms as transforms
 from torchvision.datasets import CIFAR10, LSUN, FashionMNIST, MNIST
 from datasets.celeba import CelebA
+from datasets.cub import CUB
 # from datasets.ffhq import FFHQ
 from torch.utils.data import Subset
 import numpy as np
+
 
 def get_dataset(args, config):
     if config.data.random_flip is False:
@@ -29,19 +31,20 @@ def get_dataset(args, config):
                           transform=tran_transform)
         test_dataset = CIFAR10(os.path.join(args.exp, 'datasets', 'cifar10_test'), train=False, download=True,
                                transform=test_transform)
-        
+
     elif config.data.dataset == 'FashionMNIST':
-        dataset = FashionMNIST(os.path.join(args.exp, 'datasets', 'fashion_mnist'), download=True, 
+        dataset = FashionMNIST(os.path.join(args.exp, 'datasets', 'fashion_mnist'), download=True,
                                transform=tran_transform)
-        test_dataset = FashionMNIST(os.path.join(args.exp, 'datasets', 'fashion_mnist_test'), train=False, download=True,
-                               transform=test_transform)
-        
+        test_dataset = FashionMNIST(os.path.join(args.exp, 'datasets', 'fashion_mnist_test'), train=False,
+                                    download=True,
+                                    transform=test_transform)
+
     elif config.data.dataset == 'MNIST':
-        dataset = MNIST(os.path.join(args.exp, 'datasets', 'mnist'), download=True, 
-                               transform=tran_transform)
+        dataset = MNIST(os.path.join(args.exp, 'datasets', 'mnist'), download=True,
+                        transform=tran_transform)
         test_dataset = MNIST(os.path.join(args.exp, 'datasets', 'mnist_test'), train=False, download=True,
-                               transform=test_transform)
-        
+                             transform=test_transform)
+
     elif config.data.dataset == 'CELEBA':
         if config.data.random_flip:
             dataset = CelebA(root=os.path.join(args.exp, 'datasets', 'celeba'), split='train',
@@ -66,17 +69,37 @@ def get_dataset(args, config):
                                   transforms.ToTensor(),
                               ]), download=False)
 
+    elif config.data.dataset == 'CUB':
+        if config.data.random_flip:
+            dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='train',
+                          transform=transforms.Compose([
+                              transforms.CenterCrop(140),
+                              transforms.Resize(config.data.image_size),
+                              transforms.RandomHorizontalFlip(),
+                              transforms.ToTensor(),
+                          ]), download=True)
+        else:
+            dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='train',
+                          transform=transforms.Compose([
+                              transforms.CenterCrop(140),
+                              transforms.Resize(config.data.image_size),
+                              transforms.ToTensor(),
+                          ]), download=True)
 
-    
-  
+        test_dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='test',
+                           transform=transforms.Compose([
+                               transforms.CenterCrop(140),
+                               transforms.Resize(config.data.image_size),
+                               transforms.ToTensor(),
+                           ]), download=True)
 
     return dataset, test_dataset
-
 
 
 def logit_transform(image, lam=1e-6):
     image = lam + (1 - 2 * lam) * image
     return torch.log(image) - torch.log1p(-image)
+
 
 def data_transform(config, X):
     if config.data.uniform_dequantization:
@@ -93,6 +116,7 @@ def data_transform(config, X):
         return X - config.image_mean.to(X.device)[None, ...]
 
     return X
+
 
 def inverse_data_transform(config, X):
     if hasattr(config, 'image_mean'):
