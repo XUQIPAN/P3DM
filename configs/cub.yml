@@ -55,7 +55,7 @@ data:
 
 model:
   sigma_begin: 90
-  num_classes: 312
+  num_classes: 500
   ema: true
   ema_rate: 0.999
   spec_norm: false
