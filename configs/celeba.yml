@@ -9,7 +9,7 @@ training:
   anneal_power: 2
   log_all_sigmas: false
   k: 64
-  epsilon: 1
+  epsilon: 10
 
 sampling:
   batch_size: 64

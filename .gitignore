@@ -31,3 +31,5 @@ output_final.png
 combined_image.jpg
 combined_image2.jpg
 image_grid.ipynb
+/logs/
+.ida/
