@@ -81,6 +81,7 @@ class Runner():
                 ema_helper.load_state_dict(states[4])
 
         sigmas = get_sigmas(self.config)
+        N = 1000
 
         for epoch in range(start_epoch, self.config.training.n_epochs):
             for i, (X, y) in enumerate(dataloader):
@@ -100,7 +101,12 @@ class Runner():
                 X = X.to(self.config.device)
                 X = data_transform(self.config, X)
                 # import ipdb; ipdb.set_trace()
-                
+
+                # init buff
+                self.p_sample_buff = deque(maxlen=N)
+                self.sample_buff = deque(maxlen=N)
+                self.label_buff = deque(maxlen=N)
+                self.sigma_buff = deque(maxlen=N)
                 kwargs = {'p_sample_buff': self.p_sample_buff, 'sample_buff': self.sample_buff, 
                         'label_buff':self.label_buff, 'sigma_buff':self.sigma_buff, 'config': self.config}
 
@@ -221,6 +227,7 @@ class Runner():
         sigmas = sigmas_th.cpu().numpy()
 
         fids = {}
+        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/logs/CUB'
         for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
                               desc="processing ckpt"):
             states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
@@ -238,10 +245,10 @@ class Runner():
 
             num_iters = self.config.fast_fid.num_samples // self.config.fast_fid.batch_size
             # output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
-            output_path = '/data/local/qipan/exp_celeba/dpdm_samples/samples'
+            output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/fid_samples'
             os.makedirs(output_path, exist_ok=True)
 
-            dataset, _ = get_dataset(self.args, self.config)
+            """dataset, _ = get_dataset(self.args, self.config)
             label_loader = torch.utils.data.DataLoader(dataset, 
                                                        batch_size=self.config.fast_fid.batch_size*2, 
                                                        shuffle=True)
@@ -253,20 +260,28 @@ class Runner():
             else:
                     labels = labels[:, 2:3]
             indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
-            shuffle_labels = labels[indices]
+            shuffle_labels = labels[indices]"""
 
             for i in range(num_iters):
                 init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
-                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
+
+                """all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
                                                        self.config.sampling.private_attribute,
                                                        score, sigmas,
                                                        self.config.fast_fid.n_steps_each,
                                                        self.config.fast_fid.step_lr,
                                                        verbose=self.config.fast_fid.verbose,
-                                                       denoise=self.config.sampling.denoise)
+                                                       denoise=self.config.sampling.denoise)"""
+                
+                all_samples = anneal_Langevin_dynamics_original(init_samples,
+                                                               score, sigmas,
+                                                               self.config.sampling.n_steps_each,
+                                                               self.config.sampling.step_lr,
+                                                               final_only=True, verbose=True,
+                                                               denoise=self.config.sampling.denoise)
 
                 final_samples = all_samples[-1]
                 for id, sample in enumerate(final_samples):

@@ -1,6 +1,6 @@
 training:
   batch_size: 64
-  queue_size: 60000
+  queue_size: 600
   n_epochs: 500000
   n_iters: 300001
   snapshot_freq: 5000

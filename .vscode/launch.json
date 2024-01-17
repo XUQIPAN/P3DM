@@ -9,12 +9,12 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--config", "cub.yml",
+                "--config", "celeba.yml",
                 "--doc", "${env:EXP_NAME}", // Uses the environment variable
-                "--exp", "/data/xinxi/Project/DPgan_model/logs/exp_cub"
+                "--exp", "/data/local/xinxi/Project/DPgan_model/logs/exp_celeba"
             ],
             "env": {
-                "EXP_NAME": "CUB",
+                "EXP_NAME": "CELEBA",
                 "CUDA_VISIBLE_DEVICES": "0"
             },
             "python": "/common/users/xz657/envs/anaconda3/bin/python",

@@ -70,6 +70,8 @@ def anneal_dsm_score_estimation(scorenet, samples, sigmas, labels=None, anneal_p
         # mini-batch
         if len(p_sample_buff) < config.training.queue_size:
             private_select(perturbed_samples, samples, sigmas, labels, used_sigmas, k, eps, batch_size, p_sample_buff, sample_buff, label_buff, sigma_buff)
+        else:
+            pass
     
         if len(p_sample_buff) < batch_size:
             print(len(p_sample_buff))
