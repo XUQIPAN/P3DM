@@ -7,6 +7,7 @@ from PIL import Image
 from torchvision import transforms
 from torch.utils.data import Dataset
 import os
+import random
 
 
 class CUB(VisionDataset):
@@ -83,8 +84,15 @@ class CUB(VisionDataset):
         with open(os.path.join(self.root, self.base_folder, "91_train_test_split.txt"), "r") as f:
             splits = pandas.read_csv(f, delim_whitespace=True, header=None, index_col=0)
 
-        mask = (splits[1] == split)
+        mask = (splits[1] >= split)
         self.filename = splits[mask].index.values
+        self.class_l = splits[mask][2].values
+
+        self.class_filename = []
+        for i in range(200):
+            mask = (splits[2] == i)
+            tmp_file_name = splits[mask].index.values
+            self.class_filename.append(tmp_file_name)
 
     def download(self):
         import zipfile
@@ -105,11 +113,22 @@ class CUB(VisionDataset):
         if not os.path.exists(os.path.join(self.root, self.base_folder, 'images')):
             with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "crop_images.zip"), "r") as f:
                 f.extractall(os.path.join(self.root, self.base_folder))
+    
+    def privacy_sample(self, class_idx):
+        tmp_file_name = self.class_filename[class_idx]
+        sample_idx = random.randint(0, len(tmp_file_name) - 1)
+
+        X = PIL.Image.open(os.path.join(self.root, self.base_folder, "images", tmp_file_name[sample_idx]))
+        if self.transform is not None:
+            X = self.transform(X)
+        
+        return X
+
 
     def __getitem__(self, index):
         X = PIL.Image.open(os.path.join(self.root, self.base_folder, "images", self.filename[index]))
 
-        target = [1]
+        target = self.class_l[index]
 
         if self.transform is not None:
             X = self.transform(X)

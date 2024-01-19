@@ -3,7 +3,7 @@ training:
   queue_size: 60000
   n_epochs: 500000
   n_iters: 300001
-  snapshot_freq: 1000
+  snapshot_freq: 3000
   sample_size: 9
   snapshot_sampling: true
   anneal_power: 2

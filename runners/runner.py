@@ -103,12 +103,14 @@ class Runner():
                 # import ipdb; ipdb.set_trace()
 
                 # init buff
-                self.p_sample_buff = deque(maxlen=N)
-                self.sample_buff = deque(maxlen=N)
-                self.label_buff = deque(maxlen=N)
-                self.sigma_buff = deque(maxlen=N)
+                #self.p_sample_buff = deque(maxlen=N)
+                #self.sample_buff = deque(maxlen=N)
+                #self.label_buff = deque(maxlen=N)
+                #self.sigma_buff = deque(maxlen=N)
+
                 kwargs = {'p_sample_buff': self.p_sample_buff, 'sample_buff': self.sample_buff, 
-                        'label_buff':self.label_buff, 'sigma_buff':self.sigma_buff, 'config': self.config}
+                        'label_buff':self.label_buff, 'sigma_buff':self.sigma_buff, 'config': self.config,
+                        'data_transform': data_transform, 'dataset': dataset, 'mode': 'cub', 'class_l':y}
 
                 losses = anneal_dsm_score_estimation(score, X, sigmas, None,
                                                    self.config.training.anneal_power,

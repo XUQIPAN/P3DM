@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '7'
+#os.environ["CUDA_VISIBLE_DEVICES"] = '7'
 import argparse
 import traceback
 import time
@@ -34,7 +34,7 @@ def parse_args_and_config():
     parser.add_argument('--ni', action='store_true', help="No interaction. Suitable for Slurm Job launcher")
 
     args = parser.parse_args()
-    args.log_path = os.path.join(args.exp, 'logs', args.doc)
+    args.log_path = os.path.join(args.exp, 'logs', args.doc + '-test')
 
     # parse config file
     with open(os.path.join('configs', args.config), 'r') as f:

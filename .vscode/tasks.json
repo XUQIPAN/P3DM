@@ -8,12 +8,12 @@
             "args": [
                 "${workspaceFolder}/main.py",
                 "--config", "cub.yml",
-                "--doc", "CUB",
-                "--exp", "/data/xinxi/Project/DPgan_model/logs/exp_cub"
+                "--doc", "CUB-test",
+                "--exp", "/data/xinxi/Project/DPgan_model/logs/exp_cubtest"
             ],
             "env": {
-                "EXP_NAME": "CUB",
-                "CUDA_VISIBLE_DEVICES": "0"
+                "EXP_NAME": "CUB-test",
+                "CUDA_VISIBLE_DEVICES": "2"
             },
             "group": {
                 "kind": "build",

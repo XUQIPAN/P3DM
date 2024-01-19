@@ -41,7 +41,7 @@ def private_select(perturbed_samples, samples, sigmas, labels, used_sigmas, k, e
                 new_sigma = sigmas[new_label][0]
                 label_ix = new_label[0]
 
-#         import ipdb; ipdb.set_trace()
+#       import ipdb; ipdb.set_trace()
         p_sample_buff.append(perturbed_samples[i])
         sample_buff.append(samples[sample_ix])
         label_buff.append(label_ix)
@@ -50,10 +50,56 @@ def private_select(perturbed_samples, samples, sigmas, labels, used_sigmas, k, e
     return 0
 # -
 
+def private_select_cub(perturbed_samples, samples, sigmas, labels, used_sigmas, k, eps, batch_size, p_sample_buff=None, sample_buff=None, label_buff=None, sigma_buff=None,
+                       data_transform=None, dataset=None, class_l=None, config=None):
+    
+    n = perturbed_samples.shape[0]
+    m = samples.shape[0]
+    
+    if m < k:
+        k = m
 
+    for i in range(n):        
+        private_sigmas = used_sigmas.squeeze().clone()
+        private_labels = labels.clone()
+
+            
+        weight = numpy.ones(k)
+        weight[i] = numpy.exp(eps)
+        sample_ix = random.choices(range(k), weights=weight)[0]
+        
+        if sample_ix == i:
+            sample_buff.append(samples[sample_ix])
+            new_sigma = private_sigmas[i]
+            label_ix = private_labels[i]
+        else:
+
+            tmp = dataset.privacy_sample(int(class_l[i].cpu())).unsqueeze(0).to(config.device)
+            tmp = data_transform(config, tmp).squeeze(0)
+            D = torch.max(torch.abs(perturbed_samples[i].view(1,-1) - tmp.view(1, -1)), dim=1)[0] / used_sigmas[i]
+            if D <= 5:
+                new_sigma = private_sigmas[i]
+                label_ix = private_labels[i]
+            else:
+                ideal_sigmas = torch.max(torch.abs(perturbed_samples[i].view(1,-1) - tmp.view(1, -1)), dim=1)[0] / 5
+                new_label = torch.nonzero(ideal_sigmas > sigmas)[0] - 1
+                new_sigma = sigmas[new_label][0]
+                label_ix = new_label[0]
+
+            sample_buff.append(tmp)
+        
+        
+
+#       import ipdb; ipdb.set_trace()
+        p_sample_buff.append(perturbed_samples[i])
+        label_buff.append(label_ix)
+        sigma_buff.append(new_sigma)
+                
+    return 0
 
 def anneal_dsm_score_estimation(scorenet, samples, sigmas, labels=None, anneal_power=2., hook=None,
-            p_sample_buff=None, sample_buff=None, label_buff=None, sigma_buff=None, config=None):
+            p_sample_buff=None, sample_buff=None, label_buff=None, sigma_buff=None, config=None,
+            data_transform=None, dataset=None, mode=None, class_l=None):
 
     if labels is None:
         labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
@@ -69,9 +115,10 @@ def anneal_dsm_score_estimation(scorenet, samples, sigmas, labels=None, anneal_p
                 
         # mini-batch
         if len(p_sample_buff) < config.training.queue_size:
-            private_select(perturbed_samples, samples, sigmas, labels, used_sigmas, k, eps, batch_size, p_sample_buff, sample_buff, label_buff, sigma_buff)
-        else:
-            pass
+            if mode == 'cub':
+                private_select_cub(perturbed_samples, samples, sigmas, labels, used_sigmas, k, eps, batch_size, p_sample_buff, sample_buff, label_buff, sigma_buff, data_transform, dataset, class_l, config)
+            else:
+                private_select(perturbed_samples, samples, sigmas, labels, used_sigmas, k, eps, batch_size, p_sample_buff, sample_buff, label_buff, sigma_buff)
     
         if len(p_sample_buff) < batch_size:
             print(len(p_sample_buff))
