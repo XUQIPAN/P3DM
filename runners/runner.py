@@ -16,6 +16,7 @@ from losses import get_optimizer
 from models import anneal_Langevin_dynamics, anneal_Langevin_dynamics_original
 from models import get_sigmas
 from models.ema import EMAHelper
+from models.guided_diffusion.script_util import create_classifier
 
 
 
@@ -453,14 +454,76 @@ class Runner():
         
         with open(os.path.join(save_path, '{}.pickle'.format(self.config.sampling.private_attribute)), 'wb') as handle:
             pickle.dump(private_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-            
-                
-            
-
-
-            
-            
-
     
+    def train_cls(self):
+        # get dataset
+        dataset, test_dataset = get_dataset(self.args, self.config)
+        dataset.target_mode = 'att_1'
+        test_dataset.target_mode = 'att_2'
+
+        dataloader = DataLoader(dataset, batch_size=self.config.training.k, shuffle=True,
+                                num_workers=self.config.data.num_workers, drop_last=True)
+        test_loader = DataLoader(test_dataset, batch_size=self.config.training.batch_size, shuffle=True,
+                                 num_workers=self.config.data.num_workers, drop_last=True)
+        test_iter = iter(test_loader)
+
+        self.config.input_dim = self.config.data.image_size ** 2 * self.config.data.channels
+        
+        tb_logger = self.config.tb_logger
+
+        cls = create_classifier(image_size=64,
+        classifier_use_fp16=False,
+        classifier_width=128,
+        classifier_depth=2,
+        classifier_attention_resolutions="32,16,8",  # 16
+        classifier_use_scale_shift_norm=True,  # False
+        classifier_resblock_updown=True,  # False
+        classifier_pool="attention",)
+
+        optimizer = get_optimizer(self.config, cls.parameters())
+
+        start_epoch = 0
+        step = 0
+
+        sigmas = get_sigmas(self.config)
+        criterian = torch.nn.CrossEntropyLoss()
+        N = 1000
+
+        log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_1'
+        os.makedirs(log_path, exist_ok=True)
+
+        for epoch in range(start_epoch, self.config.training.n_epochs):
+            for i, (X, y) in enumerate(dataloader):
+
+                cls.train()
+                step += 1
+
+                X = X.to(self.config.device)
+                X = data_transform(self.config, X)
+
+                #TODO
+                samples = X
+                labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
+                used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
+                noise = torch.randn_like(samples) * used_sigmas
+                perturbed_samples = samples + noise
+
+                out = cls(perturbed_samples, labels)
+
+                loss = criterian(out, y)
+                logging.info("step: {}, loss: {}".format(step, float(loss)))
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                if step >= self.config.training.n_iters:
+                    return 0
+
+                if step % self.config.training.snapshot_freq == 0:
+                    states = [
+                        cls.state_dict(),
+                    ]
+
+                    torch.save(states, os.path.join(log_path, 'checkpoint_{}.pth'.format(step)))
+                    torch.save(states, os.path.join(log_path.log_path, 'checkpoint.pth'))

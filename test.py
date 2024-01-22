@@ -1,25 +1,57 @@
-import os
-from PIL import Image
+from models.guided_diffusion.unet import EncoderUNetModel
+import torch
+def create_classifier(
+    image_size,
+    classifier_use_fp16,
+    classifier_width,
+    classifier_depth,
+    classifier_attention_resolutions,
+    classifier_use_scale_shift_norm,
+    classifier_resblock_updown,
+    classifier_pool,
+):
+    if image_size == 512:
+        channel_mult = (0.5, 1, 1, 2, 2, 4, 4)
+    elif image_size == 256:
+        channel_mult = (1, 1, 2, 2, 4, 4)
+    elif image_size == 128:
+        channel_mult = (1, 1, 2, 3, 4)
+    elif image_size == 64:
+        channel_mult = (1, 2, 3, 4)
+    else:
+        raise ValueError(f"unsupported image size: {image_size}")
 
-from tqdm import tqdm 
-def resize_images_in_folder(source_folder, target_folder, size=(64, 64)):
-    if not os.path.exists(target_folder):
-        os.makedirs(target_folder)
+    attention_ds = []
+    for res in classifier_attention_resolutions.split(","):
+        attention_ds.append(image_size // int(res))
 
-    for filename in tqdm(os.listdir(source_folder)):
-        if filename.endswith(('.png', '.jpg', '.jpeg')):  # Add/check file extensions as needed
-            try:
-                img_path = os.path.join(source_folder, filename)
-                img = Image.open(img_path)
-                img = img.resize(size, Image.ANTIALIAS)
+    return EncoderUNetModel(
+        image_size=image_size,
+        in_channels=3,
+        model_channels=classifier_width,
+        out_channels=2,
+        num_res_blocks=classifier_depth,
+        attention_resolutions=tuple(attention_ds),
+        channel_mult=channel_mult,
+        use_fp16=classifier_use_fp16,
+        num_head_channels=64,
+        use_scale_shift_norm=classifier_use_scale_shift_norm,
+        resblock_updown=classifier_resblock_updown,
+        pool=classifier_pool,
+    )
 
-                # Save to target folder
-                img.save(os.path.join(target_folder, filename))
+cls = create_classifier(image_size=64,
+        classifier_use_fp16=False,
+        classifier_width=128,
+        classifier_depth=2,
+        classifier_attention_resolutions="32,16,8",  # 16
+        classifier_use_scale_shift_norm=True,  # False
+        classifier_resblock_updown=True,  # False
+        classifier_pool="attention",)
 
-            except IOError as e:
-                print(f"Error processing file {filename}: {e}")
 
-# Usage
-source_dir = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images'
-target_dir = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images2'
-resize_images_in_folder(source_dir, target_dir)
+img = torch.randn(4, 3, 64, 64)
+t = torch.tensor([1,2,3,4])
+out = cls(img, timesteps=t)
+
+print(out.shape)

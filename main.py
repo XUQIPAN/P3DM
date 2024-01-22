@@ -180,6 +180,11 @@ def main():
 
     try:
         runner = Runner(args, config)
+
+        runner.train_cls()
+        exit(0)
+
+
         if args.test:
             runner.test()
         elif args.sample:
