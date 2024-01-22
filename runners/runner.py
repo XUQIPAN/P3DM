@@ -102,11 +102,6 @@ class Runner():
                 X = data_transform(self.config, X)
                 # import ipdb; ipdb.set_trace()
 
-                # init buff
-                #self.p_sample_buff = deque(maxlen=N)
-                #self.sample_buff = deque(maxlen=N)
-                #self.label_buff = deque(maxlen=N)
-                #self.sigma_buff = deque(maxlen=N)
 
                 kwargs = {'p_sample_buff': self.p_sample_buff, 'sample_buff': self.sample_buff, 
                         'label_buff':self.label_buff, 'sigma_buff':self.sigma_buff, 'config': self.config,
@@ -214,13 +209,26 @@ class Runner():
     def fast_fid(self):
         ### Test the fids of ensembled checkpoints.
         ### Shouldn't be used for models with ema
+        from evaluation.fid_score import get_fid, get_fid_stats_path
+
+        #####
+        self.is_score()
+        path_2 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/datasets/celeba/celeba/img_align_celeba'
+        path_1 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/celeba_test_fid_stats.npz'
+        ## /data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images
+        fid = get_fid(path_1, path_2)
+        print(fid)
+        exit(0)
+        #####
+
+
         if self.config.fast_fid.ensemble:
             if self.config.model.ema:
                 raise RuntimeError("Cannot apply ensembling to models with EMA.")
             self.fast_ensemble_fid()
             return
 
-        from evaluation.fid_score import get_fid, get_fid_stats_path
+        
         import pickle
         score = get_model(self.config)
         score = torch.nn.DataParallel(score)
@@ -229,7 +237,13 @@ class Runner():
         sigmas = sigmas_th.cpu().numpy()
 
         fids = {}
-        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/logs/CUB'
+        ###########
+        # config  #
+        ###########
+        output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/inf-samples2'
+        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/logs/CELEBA-inf'
+
+        count = 0
         for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
                               desc="processing ckpt"):
             states = torch.load(os.path.join(self.args.log_path, f'checkpoint_{ckpt}.pth'),
@@ -247,7 +261,7 @@ class Runner():
 
             num_iters = self.config.fast_fid.num_samples // self.config.fast_fid.batch_size
             # output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
-            output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/fid_samples'
+            
             os.makedirs(output_path, exist_ok=True)
 
             """dataset, _ = get_dataset(self.args, self.config)
@@ -293,7 +307,8 @@ class Runner():
 
                     sample = inverse_data_transform(self.config, sample)
 
-                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(id)))
+                    save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(count)))
+                    count += 1
 
             stat_path = get_fid_stats_path(self.args, self.config, download=True)
             fid = get_fid(stat_path, output_path)
@@ -312,7 +327,7 @@ class Runner():
         import pickle
 
         # inception score test
-        base_path = '/data/local/qipan/exp_celeba/dpdm_samples'
+        base_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/inf-samples'
         checkpoint_paths = os.listdir(base_path)
 
         dims = 2048
@@ -326,7 +341,7 @@ class Runner():
             print(path)
             if path.endswith('.pickle'):
                 continue
-            ckpt_path = pathlib.Path(os.path.join(base_path, path))
+            ckpt_path = pathlib.Path('/data/local/xinxi/Project/DPgan_model/logs/exp_cub/inf-samples')
             images_path = list(ckpt_path.glob('*.jpg')) + list(ckpt_path.glob('*.png'))
 
             activations = get_activations(images_path, model, 50, dims, True)
@@ -349,6 +364,8 @@ class Runner():
 
             # Calculate the Inception Score
             inception_score = np.mean(scores)
+            print(inception_score)
+            exit(0)
             inception_score_dict[ckpt_path] = inception_score
             print("ckpt: {}, inception_score: {}".format(ckpt_path, inception_score))
 

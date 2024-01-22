@@ -1,19 +1,25 @@
 import os
 from PIL import Image
 
-# Directory path
-directory_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/datasets/celeba/celeba/img_align_celeba'
+from tqdm import tqdm 
+def resize_images_in_folder(source_folder, target_folder, size=(64, 64)):
+    if not os.path.exists(target_folder):
+        os.makedirs(target_folder)
 
-# List to hold images (optional, depends on what you want to do with the images)
-images = []
+    for filename in tqdm(os.listdir(source_folder)):
+        if filename.endswith(('.png', '.jpg', '.jpeg')):  # Add/check file extensions as needed
+            try:
+                img_path = os.path.join(source_folder, filename)
+                img = Image.open(img_path)
+                img = img.resize(size, Image.ANTIALIAS)
 
-# Iterate over each file in the directory
-for filename in os.listdir(directory_path):
-    if filename.endswith(".jpg"):  # Check if the file is a JPEG image
-        file_path = os.path.join(directory_path, filename)  # Full path to the file
+                # Save to target folder
+                img.save(os.path.join(target_folder, filename))
 
-        # Open and possibly process the image
-        try:
-            image = Image.open(file_path)
-        except:
-            print(filename)
+            except IOError as e:
+                print(f"Error processing file {filename}: {e}")
+
+# Usage
+source_dir = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images'
+target_dir = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images2'
+resize_images_in_folder(source_dir, target_dir)

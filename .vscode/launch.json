@@ -9,13 +9,14 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--config", "cub.yml",
+                "--config", "celeba.yml",
                 "--doc", "${env:EXP_NAME}", // Uses the environment variable
-                "--exp", "/data/local/xinxi/Project/DPgan_model/logs/exp_cub"
+                "--exp", "/data/local/xinxi/Project/DPgan_model/logs/exp_celeba",
+                "--fast_fid"
             ],
             "env": {
-                "EXP_NAME": "CUB-test",
-                "CUDA_VISIBLE_DEVICES": "6"
+                "EXP_NAME": "CELEBA-test",
+                "CUDA_VISIBLE_DEVICES": "0"
             },
             "python": "/common/users/xz657/envs/anaconda3/bin/python",
             "cwd": "${workspaceFolder}" // Sets the current working directory

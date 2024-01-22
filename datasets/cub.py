@@ -50,7 +50,8 @@ class CUB(VisionDataset):
                  split="train",
                  target_type="attr",
                  transform=None, target_transform=None,
-                 download=True):
+                 download=True,
+                 target_mode='cls'):
         import pandas
         super(CUB, self).__init__(root)
         self.split = split
@@ -58,6 +59,7 @@ class CUB(VisionDataset):
             self.target_type = target_type
         else:
             self.target_type = [target_type]
+        self.target_mode = target_mode
         self.transform = transform
         self.target_transform = target_transform
 
@@ -84,9 +86,13 @@ class CUB(VisionDataset):
         with open(os.path.join(self.root, self.base_folder, "91_train_test_split.txt"), "r") as f:
             splits = pandas.read_csv(f, delim_whitespace=True, header=None, index_col=0)
 
-        mask = (splits[1] >= split)
+        mask = (splits[1] == split)
         self.filename = splits[mask].index.values
+
         self.class_l = splits[mask][2].values
+        self.att_1 = splits[mask][3].values
+        self.att_2 = splits[mask][4].values
+        self.att_3 = splits[mask][5].values
 
         self.class_filename = []
         for i in range(200):
@@ -128,7 +134,14 @@ class CUB(VisionDataset):
     def __getitem__(self, index):
         X = PIL.Image.open(os.path.join(self.root, self.base_folder, "images", self.filename[index]))
 
-        target = self.class_l[index]
+        if self.target_mode == 'cls':
+            target = self.class_l[index]
+        elif self.target_mode == 'att_1':
+            target = self.att_1[index]
+        elif self.target_mode == 'att_2':
+            target = self.att_2[index]
+        elif self.target_mode == 'att_3':
+            target = self.att_3[index]
 
         if self.transform is not None:
             X = self.transform(X)

@@ -4,8 +4,8 @@
 cd /data/local/xinxi/Project/DPgan_model
 
 # Set the environment variables as specified in launch.json
-export EXP_NAME=CUB-test
-export CUDA_VISIBLE_DEVICES=6
+export EXP_NAME=CUB-inf
+export CUDA_VISIBLE_DEVICES=1
 
 # Specify the exact Python interpreter used in VSCode
 PYTHON_PATH="/common/users/xz657/envs/anaconda3/envs/py39/bin/python"
@@ -14,7 +14,7 @@ PYTHON_PATH="/common/users/xz657/envs/anaconda3/envs/py39/bin/python"
 SCRIPT="/data/local/xinxi/Project/DPgan_model/main.py"
 
 # Your script's arguments as specified in launch.json
-SCRIPT_ARGS="--config cub.yml --doc $EXP_NAME --exp /data/local/xinxi/Project/DPgan_model/logs/exp_cub" 
+SCRIPT_ARGS="--config celeba.yml --doc $EXP_NAME --exp /data/local/xinxi/Project/DPgan_model/logs/exp_cub --fast_fid" 
 
 # Execute the script with the same configuration as VSCode
 $PYTHON_PATH $SCRIPT $SCRIPT_ARGS
