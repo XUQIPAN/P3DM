@@ -1,4 +1,5 @@
 import numpy as np
+import wandb
 import glob
 from tqdm import tqdm
 from losses.dsm import anneal_dsm_score_estimation
@@ -17,7 +18,6 @@ from models import anneal_Langevin_dynamics, anneal_Langevin_dynamics_original
 from models import get_sigmas
 from models.ema import EMAHelper
 from models.guided_diffusion.script_util import create_classifier
-
 
 
 def get_model(config):
@@ -213,13 +213,13 @@ class Runner():
         from evaluation.fid_score import get_fid, get_fid_stats_path
 
         #####
-        self.is_score()
-        path_2 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/datasets/celeba/celeba/img_align_celeba'
-        path_1 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/celeba_test_fid_stats.npz'
+        #self.is_score()
+        #path_2 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/datasets/celeba/celeba/img_align_celeba'
+        #path_1 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/celeba_test_fid_stats.npz'
         ## /data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images
-        fid = get_fid(path_1, path_2)
-        print(fid)
-        exit(0)
+        #fid = get_fid(path_1, path_2)
+        #print(fid)
+        #exit(0)
         #####
 
 
@@ -237,12 +237,24 @@ class Runner():
         sigmas_th = get_sigmas(self.config)
         sigmas = sigmas_th.cpu().numpy()
 
+        # get cls
+        cls = create_classifier(image_size=64,
+        classifier_use_fp16=False,
+        classifier_width=128,
+        classifier_depth=2,
+        classifier_attention_resolutions="32,16,8",  # 16
+        classifier_use_scale_shift_norm=True,  # False
+        classifier_resblock_updown=True,  # False
+        classifier_pool="attention",).to(self.config.device)
+
         fids = {}
         ###########
         # config  #
         ###########
-        output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/inf-samples2'
-        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/logs/CELEBA-inf'
+        output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/att_3_samples'
+        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/logs/CUB-test-test'
+        cls_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_1_noise/checkpoint_15000.pth'
+        cls.load_state_dict(torch.load(cls_path)[0])
 
         count = 0
         for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
@@ -265,19 +277,7 @@ class Runner():
             
             os.makedirs(output_path, exist_ok=True)
 
-            """dataset, _ = get_dataset(self.args, self.config)
-            label_loader = torch.utils.data.DataLoader(dataset, 
-                                                       batch_size=self.config.fast_fid.batch_size*2, 
-                                                       shuffle=True)
-            _, labels = next(iter(label_loader))
-            if self.config.sampling.private_attribute == 'gender':
-                    labels = labels[:, 20:21]
-            elif self.config.sampling.private_attribute == 'smile':
-                    labels = labels[:, 31:32]
-            else:
-                    labels = labels[:, 2:3]
-            indices = torch.randperm(len(labels))[:self.config.fast_fid.batch_size]
-            shuffle_labels = labels[indices]"""
+            shuffle_labels = torch.randint(0, 1, (self.config.fast_fid.batch_size,), device=self.config.device)
 
             for i in range(num_iters):
                 init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
@@ -285,20 +285,21 @@ class Runner():
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
 
-                """all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
+                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
                                                        self.config.sampling.private_attribute,
                                                        score, sigmas,
                                                        self.config.fast_fid.n_steps_each,
                                                        self.config.fast_fid.step_lr,
                                                        verbose=self.config.fast_fid.verbose,
-                                                       denoise=self.config.sampling.denoise)"""
+                                                       denoise=self.config.sampling.denoise,
+                                                       cls=cls)
                 
-                all_samples = anneal_Langevin_dynamics_original(init_samples,
+                """all_samples = anneal_Langevin_dynamics_original(init_samples,
                                                                score, sigmas,
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,
-                                                               denoise=self.config.sampling.denoise)
+                                                               denoise=self.config.sampling.denoise)"""
 
                 final_samples = all_samples[-1]
                 for id, sample in enumerate(final_samples):
@@ -311,6 +312,7 @@ class Runner():
                     save_image(sample, os.path.join(output_path, 'sample_{}.png'.format(count)))
                     count += 1
 
+            exit(0)
             stat_path = get_fid_stats_path(self.args, self.config, download=True)
             fid = get_fid(stat_path, output_path)
             fids[ckpt] = fid
@@ -456,20 +458,29 @@ class Runner():
             pickle.dump(private_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
     def train_cls(self):
+        # wandb.login
+        wandb.login(key='9d61360e0722073614d3edd016df312b3f6e2aa2')
+        wandb.init(
+            project='dp-diff',
+            name='cub-att3-clean version',
+        )
+        log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_3_clean'
+        os.makedirs(log_path, exist_ok=True)
+
+
         # get dataset
         dataset, test_dataset = get_dataset(self.args, self.config)
         dataset.target_mode = 'att_1'
-        test_dataset.target_mode = 'att_2'
+        test_dataset.target_mode = 'att_1'
 
         dataloader = DataLoader(dataset, batch_size=self.config.training.k, shuffle=True,
                                 num_workers=self.config.data.num_workers, drop_last=True)
         test_loader = DataLoader(test_dataset, batch_size=self.config.training.batch_size, shuffle=True,
                                  num_workers=self.config.data.num_workers, drop_last=True)
-        test_iter = iter(test_loader)
 
         self.config.input_dim = self.config.data.image_size ** 2 * self.config.data.channels
         
-        tb_logger = self.config.tb_logger
+        #tb_logger = self.config.tb_logger
 
         cls = create_classifier(image_size=64,
         classifier_use_fp16=False,
@@ -478,7 +489,7 @@ class Runner():
         classifier_attention_resolutions="32,16,8",  # 16
         classifier_use_scale_shift_norm=True,  # False
         classifier_resblock_updown=True,  # False
-        classifier_pool="attention",)
+        classifier_pool="attention",).to(self.config.device)
 
         optimizer = get_optimizer(self.config, cls.parameters())
 
@@ -489,8 +500,7 @@ class Runner():
         criterian = torch.nn.CrossEntropyLoss()
         N = 1000
 
-        log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_1'
-        os.makedirs(log_path, exist_ok=True)
+        
 
         for epoch in range(start_epoch, self.config.training.n_epochs):
             for i, (X, y) in enumerate(dataloader):
@@ -500,18 +510,27 @@ class Runner():
 
                 X = X.to(self.config.device)
                 X = data_transform(self.config, X)
+                y = y.to(self.config.device)
 
                 #TODO
-                samples = X
-                labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
-                used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
-                noise = torch.randn_like(samples) * used_sigmas
-                perturbed_samples = samples + noise
+                #samples = X
+                #labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
+                #used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
+                #noise = torch.randn_like(samples) * used_sigmas
+                #perturbed_samples = samples + noise
 
-                out = cls(perturbed_samples, labels)
+                perturbed_samples = X
+                labels = torch.tensor([0] * X.shape[0], device=X.device)
+
+                out = cls(perturbed_samples, timesteps=labels)
+                pred = torch.max(out, 1)[1]
+                correct_predictions = (pred == y).sum().item()
 
                 loss = criterian(out, y)
-                logging.info("step: {}, loss: {}".format(step, float(loss)))
+                logging.info("step: {}, loss: {}, acc: {}".format(step, float(loss), correct_predictions/self.config.training.k))
+                logs = {'loss': float(loss),
+                        'acc': correct_predictions/self.config.training.k}
+                wandb.log(logs)
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -526,4 +545,37 @@ class Runner():
                     ]
 
                     torch.save(states, os.path.join(log_path, 'checkpoint_{}.pth'.format(step)))
-                    torch.save(states, os.path.join(log_path.log_path, 'checkpoint.pth'))
+                    torch.save(states, os.path.join(log_path, 'checkpoint.pth'))
+
+                    cls.eval()
+                    loss_l = []
+                    acc_l = []
+                    with torch.no_grad():
+                        for i, (X, y) in enumerate(test_loader):
+
+                            X = X.to(self.config.device)
+                            X = data_transform(self.config, X)
+                            y = y.to(self.config.device)
+
+                            #samples = X
+                            #labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
+                            #used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
+                            #noise = torch.randn_like(samples) * used_sigmas
+                            #perturbed_samples = samples + noise
+
+                            perturbed_samples = X
+                            labels = torch.tensor([0] * X.shape[0], device=X.device)
+
+                            out = cls(perturbed_samples, labels)
+                            pred = torch.max(out, 1)[1]
+                            correct_predictions = (pred == y).sum().item()
+
+                            loss = criterian(out, y)
+
+                            loss_l.append(float(loss))
+                            acc_l.append(correct_predictions/self.config.training.k)
+                    
+                    
+                    logs = {'eval_loss': np.mean(loss_l),
+                        'eval_acc': np.mean(acc_l)}
+                    wandb.log(logs)

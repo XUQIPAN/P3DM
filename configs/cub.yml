@@ -27,13 +27,13 @@ sampling:
   private_attribute: smile
 
 fast_fid:
-  batch_size: 512
+  batch_size: 128
   num_samples: 10240
   step_lr: 0.0000033
   n_steps_each: 5
-  begin_ckpt: 66000
-  end_ckpt: 66000
-  verbose: false
+  begin_ckpt: 99000
+  end_ckpt: 99000
+  verbose: True
   ensemble: false
 
 test:

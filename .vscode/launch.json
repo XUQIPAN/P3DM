@@ -16,7 +16,7 @@
             ],
             "env": {
                 "EXP_NAME": "CELEBA-test",
-                "CUDA_VISIBLE_DEVICES": "2"
+                "CUDA_VISIBLE_DEVICES": "0"
             },
             "python": "/common/users/xz657/envs/anaconda3/bin/python",
             "cwd": "${workspaceFolder}" // Sets the current working directory
