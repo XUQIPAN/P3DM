@@ -45,20 +45,26 @@ def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor, attribute:str)->f
     expanded_variance = variance.unsqueeze(1).unsqueeze(1).unsqueeze(1)
     return scale * expanded_variance * gradient
 
-def grad_classifier_cub(scale:int, x:torch.tensor, y:torch.tensor, t, model)->float:
-    # compute the gradient of classifier
-    target = y.cuda()
-    bsz = y.shape[0]
-    t = torch.tensor([t]*bsz, device=y.device)
+def grad_classifier_cub(scale:int, x:torch.tensor, y:torch.tensor, t, model):
+    with torch.enable_grad():
+        # compute the gradient of classifier
+        target = y.cuda()
+        bsz = y.shape[0]
+        t = torch.tensor([t]*bsz, device=y.device)
 
-    criterion = nn.CrossEntropyLoss()
-    pred = model(x, timesteps=t)
-    loss = criterion(pred, target)
+        criterion = nn.CrossEntropyLoss()
+        pred = model(x, timesteps=t)
+        loss = criterion(pred, target)
 
-    gradient = torch.autograd.grad(outputs=loss, inputs=x)[0]
-    variance = torch.var(x, dim=(1, 2, 3)).cuda()
-    expanded_variance = variance.unsqueeze(1).unsqueeze(1).unsqueeze(1)
-    return scale * expanded_variance * gradient
+        gradient = torch.autograd.grad(outputs=loss, inputs=x)[0]
+        variance = torch.var(x, dim=(1, 2, 3)).cuda()
+        expanded_variance = variance.unsqueeze(1).unsqueeze(1).unsqueeze(1)
+
+        out = scale * gradient * expanded_variance
+        out2 = out.detach()
+
+        del gradient, out, expanded_variance
+        return out2
 
 
 if __name__ == "__main__":

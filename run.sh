@@ -5,7 +5,7 @@ cd /data/local/xinxi/Project/DPgan_model
 
 # Set the environment variables as specified in launch.json
 export EXP_NAME=CUB-inf
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=3
 
 # Specify the exact Python interpreter used in VSCode
 PYTHON_PATH="/common/users/xz657/envs/anaconda3/envs/py39/bin/python"

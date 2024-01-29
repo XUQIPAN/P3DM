@@ -181,7 +181,7 @@ def main():
     try:
         runner = Runner(args, config)
 
-        runner.fast_fid()
+        runner.train_cls_bi()
         exit(0)
 
 
