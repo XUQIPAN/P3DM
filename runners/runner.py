@@ -1,5 +1,5 @@
 import numpy as np
-import wandb
+# import wandb
 import glob
 from tqdm import tqdm
 from losses.dsm import anneal_dsm_score_estimation
@@ -251,10 +251,10 @@ class Runner():
         ###########
         # config  #
         ###########
-        output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/att_3_samples'
-        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/logs/CUB-test-test'
-        cls_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_1_noise/checkpoint_15000.pth'
-        cls.load_state_dict(torch.load(cls_path)[0])
+        output_path = '/data/local/ml01/qipan/exp_celeba/CG_gender_samples/male'
+        # self.args.log_path = '/data/local/ml01/qipan/exp_celeba/logs/'
+        # cls_path = '/data/local/ml01/qipan/exp_celeba/logs/NOISY_CLASSIFIER_GENDER/checkpoint_108000.pth'
+        cls.load_state_dict(torch.load(self.args.classifier_state_dict)[0])
 
         count = 0
         for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
@@ -278,7 +278,7 @@ class Runner():
             os.makedirs(output_path, exist_ok=True)
 
             shuffle_labels = torch.randint(0, 1, (self.config.fast_fid.batch_size,), device=self.config.device)
-
+            
             for i in range(num_iters):
                 init_samples = torch.rand(self.config.fast_fid.batch_size, self.config.data.channels,
                                           self.config.data.image_size, self.config.data.image_size,
@@ -318,7 +318,7 @@ class Runner():
             fids[ckpt] = fid
             print("ckpt: {}, fid: {}".format(ckpt, fid))
 
-        with open(os.path.join(self.args.image_folder, 'fids.pickle'), 'wb') as handle:
+        with open(os.path.join(output_path, 'fids.pickle'), 'wb') as handle:
             pickle.dump(fids, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
@@ -390,7 +390,7 @@ class Runner():
         # privacy eval test
         dataset_path = os.path.join(self.args.exp, 'datasets', 'celeba/celeba/img_align_celeba')
         gtimages_path = os.listdir(dataset_path)
-        base_path = '/data/local/qipan/exp_celeba/dpdm_samples/samples'
+        base_path = '/data/local/ml01/qipan/exp_celeba/CG_smile_samples'
 
         dims = 2048
         block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
@@ -438,7 +438,7 @@ class Runner():
                 ])
                 concat_images = [transform(image) for image in concat_images]
                 image_grid = make_grid(concat_images, 1)
-                save_path = os.path.join(self.args.exp, 'dpdm_samples', 
+                save_path = os.path.join(self.args.exp, 'inf-samples', 
                                         'nearest_image', self.config.sampling.private_attribute)
                 os.makedirs(save_path, exist_ok=True)
                 save_image(image_grid, os.path.join(save_path, '{}.png'.format(id)))
@@ -449,29 +449,30 @@ class Runner():
                 print(concat_images[1].unsqueeze(0).shape)
                 private_score += is_private(concat_images[0].unsqueeze(0).cuda(), 
                                             concat_images[1].unsqueeze(0).cuda(),
-                                            self.config.sampling.private_attribute)
+                                            self.args, self.config)
         
-        print("ckpt: {}, private_score: {}".format("dpdm", private_score/total_sample))
-        private_score_dict["dpdm"] = private_score/total_sample
+        print("ckpt: {}, private_score: {}".format("no_privacy", private_score/total_sample))
+        private_score_dict["no_privacy"] = private_score/total_sample
         
         with open(os.path.join(save_path, '{}.pickle'.format(self.config.sampling.private_attribute)), 'wb') as handle:
             pickle.dump(private_score_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
+
     def train_cls(self):
         # wandb.login
-        wandb.login(key='9d61360e0722073614d3edd016df312b3f6e2aa2')
-        wandb.init(
-            project='dp-diff',
-            name='cub-att3-clean version',
-        )
-        log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_3_clean'
-        os.makedirs(log_path, exist_ok=True)
+        # wandb.login(key='9d61360e0722073614d3edd016df312b3f6e2aa2')
+        # wandb.init(
+        #     project='dp-diff',
+        #     name='cub-att3-clean version',
+        # )
+        # log_path = '/data/local/ml01/qipan/NOISY_CLASSIFIER'
+        os.makedirs(self.args.log_path, exist_ok=True)
 
 
         # get dataset
         dataset, test_dataset = get_dataset(self.args, self.config)
-        dataset.target_mode = 'att_1'
-        test_dataset.target_mode = 'att_1'
+        # dataset.target_mode = 'att_1'
+        # test_dataset.target_mode = 'att_1'
 
         dataloader = DataLoader(dataset, batch_size=self.config.training.k, shuffle=True,
                                 num_workers=self.config.data.num_workers, drop_last=True)
@@ -510,27 +511,45 @@ class Runner():
 
                 X = X.to(self.config.device)
                 X = data_transform(self.config, X)
+                # attribute selection
+                if self.config.sampling.private_attribute == 'gender':
+                    y = y[:, 20:21]
+                elif self.config.sampling.private_attribute == 'smile':
+                    y = y[:, 31:32]
+                else:
+                    y = y[:, 2:3]
+                target = torch.eye(2)[y].squeeze().to(self.config.device)
                 y = y.to(self.config.device)
 
                 #TODO
-                #samples = X
-                #labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
-                #used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
-                #noise = torch.randn_like(samples) * used_sigmas
-                #perturbed_samples = samples + noise
+                samples = X
+                labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
+                used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
+                noise = torch.randn_like(samples) * used_sigmas
+                perturbed_samples = samples + noise
+                # target = torch.eye(2)[y].squeeze().cuda()
 
-                perturbed_samples = X
+                # perturbed_samples = X
                 labels = torch.tensor([0] * X.shape[0], device=X.device)
 
                 out = cls(perturbed_samples, timesteps=labels)
                 pred = torch.max(out, 1)[1]
-                correct_predictions = (pred == y).sum().item()
+                # print(out.shape)
+                # print(pred.shape)
+                # print(y[:, 31:32].squeeze().shape)
+                if step % 1000 == 0:
+                    # print(pred)
+                    K = y.squeeze()
+                    # print(K)
+                    logging.info("step: {}, pred: {}, label: {}".format(step, pred, K))
+                correct_predictions = (pred == y.squeeze()).sum().item()
+                # print(correct_predictions)
 
-                loss = criterian(out, y)
+                loss = criterian(out, target)
                 logging.info("step: {}, loss: {}, acc: {}".format(step, float(loss), correct_predictions/self.config.training.k))
                 logs = {'loss': float(loss),
                         'acc': correct_predictions/self.config.training.k}
-                wandb.log(logs)
+                # wandb.log(logs)
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -544,8 +563,8 @@ class Runner():
                         cls.state_dict(),
                     ]
 
-                    torch.save(states, os.path.join(log_path, 'checkpoint_{}.pth'.format(step)))
-                    torch.save(states, os.path.join(log_path, 'checkpoint.pth'))
+                    torch.save(states, os.path.join(self.args.log_path, 'checkpoint_{}.pth'.format(step)))
+                    torch.save(states, os.path.join(self.args.log_path, 'checkpoint.pth'))
 
                     cls.eval()
                     loss_l = []
@@ -555,27 +574,35 @@ class Runner():
 
                             X = X.to(self.config.device)
                             X = data_transform(self.config, X)
+                            # attribute selection
+                            if self.config.sampling.private_attribute == 'gender':
+                                y = y[:, 20:21]
+                            elif self.config.sampling.private_attribute == 'smile':
+                                y = y[:, 31:32]
+                            else:
+                                y = y[:, 2:3]
+                            target = torch.eye(2)[y].squeeze().to(self.config.device)
                             y = y.to(self.config.device)
 
-                            #samples = X
-                            #labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
-                            #used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
-                            #noise = torch.randn_like(samples) * used_sigmas
-                            #perturbed_samples = samples + noise
+                            samples = X
+                            labels = torch.randint(0, len(sigmas), (samples.shape[0],), device=samples.device)
+                            used_sigmas = sigmas[labels].view(samples.shape[0], *([1] * len(samples.shape[1:])))
+                            noise = torch.randn_like(samples) * used_sigmas
+                            perturbed_samples = samples + noise
 
-                            perturbed_samples = X
+                            # perturbed_samples = X
                             labels = torch.tensor([0] * X.shape[0], device=X.device)
 
                             out = cls(perturbed_samples, labels)
                             pred = torch.max(out, 1)[1]
-                            correct_predictions = (pred == y).sum().item()
+                            correct_predictions = (pred == y.squeeze()).sum().item()
 
-                            loss = criterian(out, y)
+                            loss = criterian(out, target)
 
                             loss_l.append(float(loss))
                             acc_l.append(correct_predictions/self.config.training.k)
                     
-                    
+                    logging.info("step: {}, eval_loss: {}, eval_acc: {}".format(step, np.mean(loss_l), np.mean(acc_l)))
                     logs = {'eval_loss': np.mean(loss_l),
                         'eval_acc': np.mean(acc_l)}
-                    wandb.log(logs)
+                    # wandb.log(logs)
