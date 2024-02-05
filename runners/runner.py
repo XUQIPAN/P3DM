@@ -1,5 +1,5 @@
+
 import numpy as np
-# import wandb
 import glob
 from tqdm import tqdm
 from losses.dsm import anneal_dsm_score_estimation
@@ -18,7 +18,9 @@ from models import anneal_Langevin_dynamics, anneal_Langevin_dynamics_original
 from models import get_sigmas
 from models.ema import EMAHelper
 from models.guided_diffusion.script_util import create_classifier
-
+from datasets.cub import CUB_bi
+import torchvision.transforms as transforms
+import wandb
 
 def get_model(config):
     if config.data.dataset == 'CIFAR10' or config.data.dataset == 'CELEBA' or config.data.dataset == 'FashionMNIST' or config.data.dataset == 'MNIST' or config.data.dataset == 'CUB':
@@ -251,10 +253,21 @@ class Runner():
         ###########
         # config  #
         ###########
-        output_path = '/data/local/ml01/qipan/exp_celeba/CG_gender_samples/male'
-        # self.args.log_path = '/data/local/ml01/qipan/exp_celeba/logs/'
-        # cls_path = '/data/local/ml01/qipan/exp_celeba/logs/NOISY_CLASSIFIER_GENDER/checkpoint_108000.pth'
-        cls.load_state_dict(torch.load(self.args.classifier_state_dict)[0])
+        output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/att_cls_samples_30'
+        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/logs/CUB-inf'
+        cls_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_class_noise/checkpoint_12000.pth'
+        cls.load_state_dict(torch.load(cls_path)[0])
+
+        """x = torch.randn(4,3,64,64).cuda()
+        t = torch.randint(0,100, (4,)).cuda()
+        out_1 = cls(x,t)
+
+        cls_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_att_2_noise/checkpoint_21000.pth'
+        cls.load_state_dict(torch.load(cls_path)[0])
+        out_2 = cls(x,t)
+
+        out_3 = out_1-out_2"""
+
 
         count = 0
         for ckpt in tqdm(range(self.config.fast_fid.begin_ckpt, self.config.fast_fid.end_ckpt + 1, 5000),
@@ -271,6 +284,7 @@ class Runner():
                 score.load_state_dict(states[0])
 
             score.eval()
+            score.requires_grad_(False)
 
             num_iters = self.config.fast_fid.num_samples // self.config.fast_fid.batch_size
             # output_path = os.path.join(self.args.image_folder, 'ckpt_{}'.format(ckpt))
@@ -285,14 +299,15 @@ class Runner():
                                           device=self.config.device, requires_grad=True)
                 init_samples = data_transform(self.config, init_samples)
 
+                #with torch.no_grad():
                 all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
-                                                       self.config.sampling.private_attribute,
-                                                       score, sigmas,
-                                                       self.config.fast_fid.n_steps_each,
-                                                       self.config.fast_fid.step_lr,
-                                                       verbose=self.config.fast_fid.verbose,
-                                                       denoise=self.config.sampling.denoise,
-                                                       cls=cls)
+                                                        self.config.sampling.private_attribute,
+                                                        score, sigmas,
+                                                        self.config.fast_fid.n_steps_each,
+                                                        self.config.fast_fid.step_lr,
+                                                        verbose=self.config.fast_fid.verbose,
+                                                        denoise=self.config.sampling.denoise,
+                                                        cls=cls)
                 
                 """all_samples = anneal_Langevin_dynamics_original(init_samples,
                                                                score, sigmas,

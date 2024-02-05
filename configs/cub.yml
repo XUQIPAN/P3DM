@@ -1,5 +1,5 @@
 training:
-  batch_size: 64
+  batch_size: 128
   queue_size: 60000
   n_epochs: 500000
   n_iters: 300001
@@ -8,7 +8,7 @@ training:
   snapshot_sampling: true
   anneal_power: 2
   log_all_sigmas: false
-  k: 64
+  k: 128
   epsilon: 10
 
 sampling:
@@ -27,7 +27,7 @@ sampling:
   private_attribute: smile
 
 fast_fid:
-  batch_size: 128
+  batch_size: 64
   num_samples: 10240
   step_lr: 0.0000033
   n_steps_each: 5

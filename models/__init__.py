@@ -45,15 +45,16 @@ def anneal_Langevin_dynamics(x_mod, label, attribute, scorenet, sigmas, n_steps_
             if not final_only:
                 images.append(x_mod.to('cpu'))
             if verbose:
-                print("level: {}, step_size: {}, grad_norm: {}, image_norm: {}, snr: {}, grad_mean_norm: {}".format(
-                    c, step_size, grad_norm.item(), image_norm.item(), snr.item(), grad_mean_norm.item()))
+                print("level: {}, step_size: {}, grad_norm: {}, image_norm: {}, snr: {}, grad_mean_norm: {}, cls_mean: {}".format(
+                    c, step_size, grad_norm.item(), image_norm.item(), snr.item(), grad_mean_norm.item(), torch.mean(classifier_grad).item()))
                 
     
     if denoise:
-        last_noise = (len(sigmas) - 1) * torch.ones(x_mod.shape[0], device=x_mod.device)
-        last_noise = last_noise.long()
-        x_mod = x_mod + sigmas[-1] ** 2 * scorenet(x_mod, last_noise)
-        images.append(x_mod.to('cpu'))
+        with torch.no_grad():
+            last_noise = (len(sigmas) - 1) * torch.ones(x_mod.shape[0], device=x_mod.device)
+            last_noise = last_noise.long()
+            x_mod = x_mod + sigmas[-1] ** 2 * scorenet(x_mod, last_noise)
+            images.append(x_mod.to('cpu'))
 
     if final_only:
         return [x_mod.to('cpu')]

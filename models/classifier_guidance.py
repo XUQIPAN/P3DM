@@ -19,18 +19,19 @@ def grad_classifier(scale:int, x:torch.tensor, y:torch.tensor, t, model)->float:
     bsz = y.shape[0]
     t = torch.tensor([t]*bsz, device=y.device)
 
-    criterion = nn.CrossEntropyLoss()
-    pred = model(x, timesteps=t)
-    loss = criterion(pred, target)
+        criterion = nn.CrossEntropyLoss()
+        pred = model(x, timesteps=t)
+        loss = criterion(pred, target)
 
-    gradient = torch.autograd.grad(outputs=loss, inputs=x)[0]
-    # variance = torch.var(x, dim=(1, 2, 3)).cuda()
-    # expanded_variance = variance.unsqueeze(1).unsqueeze(1).unsqueeze(1)
-    out = scale * gradient
-    out2 = out.detach()
-    del gradient, out
-    return out2
-    # return scale * gradient
+        gradient = torch.autograd.grad(outputs=loss, inputs=x)[0]
+        variance = torch.var(x, dim=(1, 2, 3)).cuda()
+        expanded_variance = variance.unsqueeze(1).unsqueeze(1).unsqueeze(1)
+
+        out = scale * gradient * expanded_variance
+        out2 = out.detach()
+
+        del gradient, out, expanded_variance
+        return out2
 
 
 if __name__ == "__main__":
