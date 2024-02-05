@@ -19,7 +19,8 @@ export CUDA_VISIBLE_DEVICES=0,1
 # Execute the script with the same configuration as VSCode
 # $PYTHON_PATH $SCRIPT $SCRIPT_ARGS
 
-export EXP_NAME=NOISY_CLASSIFIER_SMILE
+export EXP_NAME=RANDOM_0116_CELEBA_EXP_EXP10_K256_IMAGE_SIZE_28_BATCH_128
+OUTPUT_DIR="/data/local/ml01/qipan/exp_celeba/CG_smile_samples_3"
+CLASSIFIER_STATE_DICT="/data/local/ml01/qipan/exp_celeba/logs/NOISY_CLASSIFIER_SMILE/checkpoint_81000.pth"
 # export CUDA_VISIBLE_DEVICES=4, 3, 5, 6, 7;
-python main.py --config celeba.yml --doc $EXP_NAME --exp /data/local/ml01/qipan/exp_celeba  --train_cls
-
+python main.py --config celeba.yml --doc $EXP_NAME --exp /data/local/ml01/qipan/exp_celeba  --fast_fid --classifier_state_dict $CLASSIFIER_STATE_DICT --output_dir $OUTPUT_DIR --seed 123

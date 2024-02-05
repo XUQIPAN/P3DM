@@ -35,6 +35,7 @@ def parse_args_and_config():
     parser.add_argument('-i', '--image_folder', type=str, default='images', help="The folder name of samples")
     parser.add_argument('--ni', action='store_true', help="No interaction. Suitable for Slurm Job launcher")
     parser.add_argument('--classifier_state_dict', type=str, default=None, help='Path to the classifier state dict')
+    parser.add_argument('--output_dir', type=str, default=None, help='Path to the output directory')
 
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, 'logs', args.doc)

@@ -20,7 +20,6 @@ from models.ema import EMAHelper
 from models.guided_diffusion.script_util import create_classifier
 from datasets.cub import CUB_bi
 import torchvision.transforms as transforms
-import wandb
 
 def get_model(config):
     if config.data.dataset == 'CIFAR10' or config.data.dataset == 'CELEBA' or config.data.dataset == 'FashionMNIST' or config.data.dataset == 'MNIST' or config.data.dataset == 'CUB':
@@ -214,16 +213,6 @@ class Runner():
         ### Shouldn't be used for models with ema
         from evaluation.fid_score import get_fid, get_fid_stats_path
 
-        #####
-        #self.is_score()
-        #path_2 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/datasets/celeba/celeba/img_align_celeba'
-        #path_1 = '/data/local/xinxi/Project/DPgan_model/logs/exp_celeba/celeba_test_fid_stats.npz'
-        ## /data/local/xinxi/Project/DPgan_model/logs/exp_cub/datasets/cub/images
-        #fid = get_fid(path_1, path_2)
-        #print(fid)
-        #exit(0)
-        #####
-
 
         if self.config.fast_fid.ensemble:
             if self.config.model.ema:
@@ -253,9 +242,8 @@ class Runner():
         ###########
         # config  #
         ###########
-        output_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/att_cls_samples_30'
-        self.args.log_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/logs/CUB-inf'
-        cls_path = '/data/local/xinxi/Project/DPgan_model/logs/exp_cub/cls_class_noise/checkpoint_12000.pth'
+        output_path = self.args.output_dir
+        cls_path = self.args.classifier_state_dict
         cls.load_state_dict(torch.load(cls_path)[0])
 
         """x = torch.randn(4,3,64,64).cuda()
