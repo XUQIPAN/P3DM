@@ -21,9 +21,8 @@ from models.guided_diffusion.script_util import create_classifier
 from datasets.cub import CUB_bi
 import torchvision.transforms as transforms
 
-def get_model(config):
-    if config.data.dataset == 'CIFAR10' or config.data.dataset == 'CELEBA' or config.data.dataset == 'FashionMNIST' or config.data.dataset == 'MNIST' or config.data.dataset == 'CUB':
-        return RefineNet(config).to(config.device)
+def get_model(config):    
+    return RefineNet(config).to(config.device)
 
 # +
 class Runner():
@@ -107,7 +106,7 @@ class Runner():
 
                 kwargs = {'p_sample_buff': self.p_sample_buff, 'sample_buff': self.sample_buff, 
                         'label_buff':self.label_buff, 'sigma_buff':self.sigma_buff, 'config': self.config,
-                        'data_transform': data_transform, 'dataset': dataset, 'mode': 'cub', 'class_l':y}
+                        'data_transform': data_transform, 'dataset': dataset, 'mode': 'celeba', 'class_l':y}
 
                 losses = anneal_dsm_score_estimation(score, X, sigmas, None,
                                                    self.config.training.anneal_power,
@@ -288,21 +287,21 @@ class Runner():
                 init_samples = data_transform(self.config, init_samples)
 
                 #with torch.no_grad():
-                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
+                '''all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
                                                         self.config.sampling.private_attribute,
                                                         score, sigmas,
                                                         self.config.fast_fid.n_steps_each,
                                                         self.config.fast_fid.step_lr,
                                                         verbose=self.config.fast_fid.verbose,
                                                         denoise=self.config.sampling.denoise,
-                                                        cls=cls)
+                                                        cls=cls)'''
                 
-                """all_samples = anneal_Langevin_dynamics_original(init_samples,
+                all_samples = anneal_Langevin_dynamics_original(init_samples,
                                                                score, sigmas,
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,
-                                                               denoise=self.config.sampling.denoise)"""
+                                                               denoise=self.config.sampling.denoise)
 
                 final_samples = all_samples[-1]
                 for id, sample in enumerate(final_samples):
@@ -393,7 +392,7 @@ class Runner():
         # privacy eval test
         dataset_path = os.path.join(self.args.exp, 'datasets', 'celeba/celeba/img_align_celeba')
         gtimages_path = os.listdir(dataset_path)
-        base_path = '/data/local/ml01/qipan/exp_celeba/CG_smile_samples'
+        base_path = self.args.eval_dir
 
         dims = 2048
         block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
@@ -436,13 +435,12 @@ class Runner():
                 concat_images = [Image.open(path) for path in concat_images_path]
                 # reshape ground truth image size
                 transform = transforms.Compose([
-                    transforms.Resize((128, 128)),
+                    transforms.Resize((self.config.data.image_size, self.config.data.image_size)),
                     transforms.ToTensor(),
                 ])
                 concat_images = [transform(image) for image in concat_images]
                 image_grid = make_grid(concat_images, 1)
-                save_path = os.path.join(self.args.exp, 'inf-samples', 
-                                        'nearest_image', self.config.sampling.private_attribute)
+                save_path = os.path.join(base_path, 'nearest_images')
                 os.makedirs(save_path, exist_ok=True)
                 save_image(image_grid, os.path.join(save_path, '{}.png'.format(id)))
 
@@ -486,7 +484,7 @@ class Runner():
         
         #tb_logger = self.config.tb_logger
 
-        cls = create_classifier(image_size=64,
+        cls = create_classifier(image_size=128,
         classifier_use_fp16=False,
         classifier_width=128,
         classifier_depth=2,
@@ -519,8 +517,10 @@ class Runner():
                     y = y[:, 20:21]
                 elif self.config.sampling.private_attribute == 'smile':
                     y = y[:, 31:32]
-                else:
+                elif self.config.sampling.private_attribute == 'attractive':
                     y = y[:, 2:3]
+                else:
+                    raise ValueError('private attribute not supported')
                 target = torch.eye(2)[y].squeeze().to(self.config.device)
                 y = y.to(self.config.device)
 

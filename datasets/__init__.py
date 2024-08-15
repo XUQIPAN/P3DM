@@ -1,7 +1,7 @@
 import os
 import torch
 import torchvision.transforms as transforms
-from torchvision.datasets import CIFAR10, LSUN, FashionMNIST, MNIST
+from torchvision.datasets import CIFAR10, LSUN, FashionMNIST, MNIST, LFWPeople
 from datasets.celeba import CelebA
 from datasets.cub import CUB
 # from datasets.ffhq import FFHQ
@@ -87,6 +87,30 @@ def get_dataset(args, config):
                           ]), download=True)
 
         test_dataset = CUB(root=os.path.join(args.exp, 'datasets', 'cub'), split='test',
+                           transform=transforms.Compose([
+                               #transforms.CenterCrop(140),
+                               transforms.Resize(config.data.image_size),
+                               transforms.ToTensor(),
+                           ]), download=True)
+    
+    elif config.data.dataset == 'LFWPeople':
+        if config.data.random_flip:
+            dataset = LFWPeople(root=os.path.join(args.exp, 'datasets', 'lfw_people'), split='train',
+                          transform=transforms.Compose([
+                              #transforms.CenterCrop(140),
+                              transforms.Resize(config.data.image_size),
+                              transforms.RandomHorizontalFlip(),
+                              transforms.ToTensor(),
+                          ]), download=True)
+        else:
+            dataset = LFWPeople(root=os.path.join(args.exp, 'datasets', 'lfw_people'), split='train',
+                          transform=transforms.Compose([
+                              #transforms.CenterCrop(140),
+                              transforms.Resize(config.data.image_size),
+                              transforms.ToTensor(),
+                          ]), download=True)
+
+        test_dataset = LFWPeople(root=os.path.join(args.exp, 'datasets', 'lfw_people'), split='test',
                            transform=transforms.Compose([
                                #transforms.CenterCrop(140),
                                transforms.Resize(config.data.image_size),

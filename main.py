@@ -36,6 +36,7 @@ def parse_args_and_config():
     parser.add_argument('--ni', action='store_true', help="No interaction. Suitable for Slurm Job launcher")
     parser.add_argument('--classifier_state_dict', type=str, default=None, help='Path to the classifier state dict')
     parser.add_argument('--output_dir', type=str, default=None, help='Path to the output directory')
+    parser.add_argument('--eval_dir', type=str, default=None, help='Path for privacy evaluation')
 
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, 'logs', args.doc)
@@ -47,7 +48,7 @@ def parse_args_and_config():
 
     tb_path = os.path.join(args.exp, 'tensorboard', args.doc)
 
-    if args.train or args.train_cls:
+    if args.train or args.train_cls or args.resume_training:
         if not args.resume_training:
             if os.path.exists(args.log_path):
                 overwrite = False
@@ -178,7 +179,7 @@ def main():
     logging.info("Config =")
     print(">" * 80)
     config_dict = copy.copy(vars(config))
-    if not args.test and not args.sample and not args.fast_fid and not args.is_score and not args.privacy_eval:
+    if args.train or args.train_cls or args.resume_training:
         del config_dict['tb_logger']
     print(yaml.dump(config_dict, default_flow_style=False))
     print("<" * 80)
@@ -196,7 +197,7 @@ def main():
             runner.is_score()
         elif args.privacy_eval:
             runner.privacy_eval()
-        elif args.train:
+        elif args.train or args.resume_training:
             runner.train()
         elif args.train_cls:
             runner.train_cls()
