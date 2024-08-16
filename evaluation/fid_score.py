@@ -34,12 +34,18 @@ limitations under the License.
 """
 import os
 import pathlib
-
+from tqdm import tqdm
 import numpy as np
 import torch
 from scipy import linalg
 from torch.nn.functional import adaptive_avg_pool2d
 import os
+import torchvision.transforms as transforms
+
+transform = transforms.Compose([
+            transforms.Resize(64),
+            transforms.ToTensor()
+        ])
 
 from PIL import Image
 
@@ -94,7 +100,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
                   end='', flush=True)
         start = i
         end = i + batch_size
-
+        
         images = np.array([imread(str(f)).astype(np.float32)
                            for f in files[start:end]])
 

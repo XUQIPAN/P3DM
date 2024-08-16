@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2'
+#os.environ["CUDA_VISIBLE_DEVICES"] = '7'
 import argparse
 import traceback
 import time
@@ -30,8 +30,13 @@ def parse_args_and_config():
     parser.add_argument('--is_score', action='store_true', help='Whether to do inception score test')
     parser.add_argument('--resume_training', action='store_true', help='Whether to resume training')
     parser.add_argument('--privacy_eval', action='store_true', help='Whether to do privacy evaluation')
+    parser.add_argument('--train', action='store_true', help='Whether to train the model')
+    parser.add_argument('--train_cls', action='store_true', help='Train classifier guidance')
     parser.add_argument('-i', '--image_folder', type=str, default='images', help="The folder name of samples")
     parser.add_argument('--ni', action='store_true', help="No interaction. Suitable for Slurm Job launcher")
+    parser.add_argument('--classifier_state_dict', type=str, default=None, help='Path to the classifier state dict')
+    parser.add_argument('--output_dir', type=str, default=None, help='Path to the output directory')
+    parser.add_argument('--eval_dir', type=str, default=None, help='Path for privacy evaluation')
 
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, 'logs', args.doc)
@@ -43,7 +48,7 @@ def parse_args_and_config():
 
     tb_path = os.path.join(args.exp, 'tensorboard', args.doc)
 
-    if not args.test and not args.sample and not args.fast_fid and not args.is_score and not args.privacy_eval:
+    if args.train or args.train_cls or args.resume_training:
         if not args.resume_training:
             if os.path.exists(args.log_path):
                 overwrite = False
@@ -119,7 +124,7 @@ def parse_args_and_config():
                     sys.exit(0)
 
         elif args.fast_fid:
-            os.makedirs(os.path.join(args.exp, 'fid_samples_larger_batch_2'), exist_ok=True)
+            '''os.makedirs(os.path.join(args.exp, 'fid_samples_larger_batch_2'), exist_ok=True)
             args.image_folder = os.path.join(args.exp, 'fid_samples_larger_batch_2', args.image_folder)
             if not os.path.exists(args.image_folder):
                 os.makedirs(args.image_folder)
@@ -136,7 +141,8 @@ def parse_args_and_config():
 
                 if overwrite:
                     shutil.rmtree(args.image_folder)
-                    os.makedirs(args.image_folder)
+                    os.makedirs(args.image_folder)'''
+            pass
 
     # add device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -173,13 +179,14 @@ def main():
     logging.info("Config =")
     print(">" * 80)
     config_dict = copy.copy(vars(config))
-    if not args.test and not args.sample and not args.fast_fid and not args.is_score and not args.privacy_eval:
+    if args.train or args.train_cls or args.resume_training:
         del config_dict['tb_logger']
     print(yaml.dump(config_dict, default_flow_style=False))
     print("<" * 80)
 
     try:
         runner = Runner(args, config)
+
         if args.test:
             runner.test()
         elif args.sample:
@@ -190,8 +197,12 @@ def main():
             runner.is_score()
         elif args.privacy_eval:
             runner.privacy_eval()
-        else:
+        elif args.train or args.resume_training:
             runner.train()
+        elif args.train_cls:
+            runner.train_cls()
+        else:
+            exit(0)
     except:
         logging.error(traceback.format_exc())
 

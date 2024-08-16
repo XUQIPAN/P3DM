@@ -3,13 +3,13 @@ training:
   queue_size: 60000
   n_epochs: 500000
   n_iters: 300001
-  snapshot_freq: 5000
+  snapshot_freq: 3000
   sample_size: 9
   snapshot_sampling: true
   anneal_power: 2
   log_all_sigmas: false
   k: 64
-  epsilon: 1
+  epsilon: 10
 
 sampling:
   batch_size: 64
@@ -27,13 +27,13 @@ sampling:
   private_attribute: smile
 
 fast_fid:
-  batch_size: 1000
+  batch_size: 100
   num_samples: 1000
   step_lr: 0.0000033
   n_steps_each: 5
-  begin_ckpt: 300000
-  end_ckpt: 300000
-  verbose: false
+  begin_ckpt: 250000
+  end_ckpt: 250000
+  verbose: true
   ensemble: false
 
 test:

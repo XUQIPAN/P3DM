@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Remote Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py", // Adjust the path to your Python script
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--config", "cub.yml",
+                "--doc", "${env:EXP_NAME}", // Uses the environment variable
+                "--exp", "/data/local/xinxi/Project/DPgan_model/logs/exp_cub",
+                "--fast_fid"
+            ],
+            "env": {
+                "EXP_NAME": "CELEBA-test",
+                "CUDA_VISIBLE_DEVICES": "1"
+            },
+            "python": "/common/users/xz657/envs/anaconda3/bin/python",
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        }
+    ]
+}
