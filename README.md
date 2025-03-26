@@ -15,21 +15,35 @@ pip install -r requirements.txt
 To train the model, run the following command:
 
 ```shell
-python main.py --config celeba.yml --doc $LOG_PATH --exp $YOUR_PATH  --train
+python main.py --config celeba.yml --doc $LOG_PATH --exp $IMAGE_OUTPUT_PATH  --train
 ```
+
+### Training Classifier
+
+To train the classifier, run the following command:
+
+```shell
+python main.py --config celeba.yml --doc $LOG_PATH --exp $CLASSIFIER_STATE_DICT_PATH  --train_cls
+```
+
 ### Sampling
 
 To sample from the model, run the following command:
 
 ```shell
-python main.py --config celeba.yml --doc $EXP_NAME --exp $YOUR_PATH  --fast_fid --classifier_state_dict $CLASSIFIER_STATE_DICT --output_dir $OUTPUT_DIR --seed $SEED
+python main.py --config celeba.yml --doc $LOG_PATH --exp $IMAGE_OUTPUT_PATH  --fast_fid --classifier_state_dict $CLASSIFIER_STATE_DICT_PATH --output_dir $OUTPUT_DIR --seed $SEED
 ```
 
-### Evaluation
+### Privacy Score Evaluation
 
-To evaluate the model, run the following command:
+To evaluate the model with the privacy score, run the following command:
 
 ```shell
-python main.py --config celeba.yml --doc $EXP_NAME --exp /data/local/ml01/qipan/exp_celeba --privacy_eval --eval_dir $EVAL_DIR --classifier_state_dict $CLASSIFIER_STATE_DICT
+python main.py --config celeba.yml --doc $LOG_PATH --exp $IMAGE_OUTPUT_PATH --privacy_eval --eval_dir $EVAL_DIR --classifier_state_dict $CLASSIFIER_STATE_DICT
 ```
 
+### PAC Privacy Evaluation
+Run the following notebook:
+```shell
+pac_privacy.ipynb
+```
