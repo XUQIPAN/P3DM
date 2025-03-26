@@ -124,7 +124,7 @@ def parse_args_and_config():
                     sys.exit(0)
 
         elif args.fast_fid:
-            '''os.makedirs(os.path.join(args.exp, 'fid_samples_larger_batch_2'), exist_ok=True)
+            os.makedirs(os.path.join(args.exp, 'fid_samples_larger_batch_2'), exist_ok=True)
             args.image_folder = os.path.join(args.exp, 'fid_samples_larger_batch_2', args.image_folder)
             if not os.path.exists(args.image_folder):
                 os.makedirs(args.image_folder)
@@ -141,8 +141,7 @@ def parse_args_and_config():
 
                 if overwrite:
                     shutil.rmtree(args.image_folder)
-                    os.makedirs(args.image_folder)'''
-            pass
+                    os.makedirs(args.image_folder)
 
     # add device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

@@ -287,21 +287,21 @@ class Runner():
                 init_samples = data_transform(self.config, init_samples)
 
                 #with torch.no_grad():
-                '''all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
+                all_samples = anneal_Langevin_dynamics(init_samples, shuffle_labels, 
                                                         self.config.sampling.private_attribute,
                                                         score, sigmas,
                                                         self.config.fast_fid.n_steps_each,
                                                         self.config.fast_fid.step_lr,
                                                         verbose=self.config.fast_fid.verbose,
                                                         denoise=self.config.sampling.denoise,
-                                                        cls=cls)'''
+                                                        cls=cls)
                 
-                all_samples = anneal_Langevin_dynamics_original(init_samples,
+                '''all_samples = anneal_Langevin_dynamics_original(init_samples,
                                                                score, sigmas,
                                                                self.config.sampling.n_steps_each,
                                                                self.config.sampling.step_lr,
                                                                final_only=True, verbose=True,
-                                                               denoise=self.config.sampling.denoise)
+                                                               denoise=self.config.sampling.denoise)'''
 
                 final_samples = all_samples[-1]
                 for id, sample in enumerate(final_samples):

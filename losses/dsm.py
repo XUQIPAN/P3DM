@@ -41,7 +41,7 @@ def private_select(perturbed_samples, samples, sigmas, labels, used_sigmas, k, e
                 new_sigma = sigmas[new_label][0]
                 label_ix = new_label[0]
 
-#       import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         p_sample_buff.append(perturbed_samples[i])
         sample_buff.append(samples[sample_ix])
         label_buff.append(label_ix)
